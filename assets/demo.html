@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppBridgeH5 SDK 演示</title>
+
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet"/>
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+
+    <script>
+        let currentDownloadTaskId = null; // To store the actual task ID from FlutterDownloader
+        let isNavBarsVisible = true; // Track current visibility state
+        let isCustomTitleSet = false; // Track if custom title is set
+        let lastDownloadedApkPath = null; // Store the path of the last downloaded APK
+        let player; // Declare player globally
+        let wasPausedByNavigation = false; // Flag for pause/resume on navigation
+
+        // Pause/Resume video on navigation
+        window.addEventListener('app.pause', () => {
+            if (player && !player.paused()) {
+                player.pause();
+                wasPausedByNavigation = true;
+                console.log('Player paused due to navigation.');
+            }
+        });
+
+        window.addEventListener('app.resume', () => {
+            if (player && wasPausedByNavigation) {
+                player.play();
+                wasPausedByNavigation = false;
+                console.log('Player resumed on return to page.');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            player = videojs('m3u8VideoPlayer');
+            player.on('play', () => {
+                console.log('Playback started. Waiting 1 second to unmute.');
+                setTimeout(() => {
+                    if (player) {
+                        console.log('Attempting to unmute player.');
+                        player.muted(false);
+                    }
+                }, 1000);
+            });
+        });
+
+
+
+    </script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .section h2 {
+            color: #007AFF;
+            margin-top: 0;
+        }
+        .button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background: #0056CC;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            white-space: pre-wrap;
+            border-left: 4px solid #007AFF;
+            font-size: 13px;
+        }
+        .error {
+            border-left-color: #ff3b30;
+            background: #fff5f5;
+        }
+        .success {
+            border-left-color: #34c759;
+            background: #f0fff4;
+        }
+        .status {
+            text-align: center;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+
+
+    </style>
+</head>
+<body>
+<script>
+       window.addEventListener('download_resumed', (event) => {
+       const resumedId = event.detail.id;
+       const newStatus = event.detail.status; // 'enqueued' or 'running'
+       console.log(`Download with ID ${resumedId} was resumed. New status:
+          ${newStatus}.`);
+          // 通过 ID 在 web 端列表中找到下载任务并更新其状态。
+           const downloadItem = document.getElementById(`download-item-${resumedId}`
+          );
+       if (downloadItem) {
+         // 更新此项的状态显示
+        const statusElement = downloadItem.querySelector('.download-status');
+        if (statusElement) {
+          statusElement.textContent = newStatus;
+            }
+          }
+        });
+
+       window.addEventListener('download_progress', (event) => {
+       const downloadId = event.detail.id;
+       const status = event.detail.status; // 例如，'running', 'paused','complete', 'failed', 'canceled'
+       const progress = event.detail.progress; // 0-100
+
+       console.log(`Download ID: ${downloadId}, Status: ${status}, Progress:${progress}%`);
+       const downloadItem = document.getElementById(`download-item-${downloadId}`);
+
+      if (downloadItem) {
+        // 更新进度条
+        const progressBar = downloadItem.querySelector('.progress-bar');
+        if (progressBar) {
+          progressBar.style.width = `${progress}%`;
+          progressBar.textContent = `${progress}%`;
+        }
+        const statusElement = downloadItem.querySelector('.download-status');
+        if (statusElement) {
+          statusElement.textContent = status;
+        }
+        if (status === 'complete') {
+          // 隐藏暂停/恢复/取消按钮，显示“打开”按钮
+        } else if (status === 'failed' || status === 'canceled') {
+          // 显示“重试”按钮，隐藏进度
+        }
+      }
+    });
+
+        window.addEventListener('download.failed', (event) => {
+            console.log('Received download.failed event directly on window:', event.detail);
+            const data = event.detail;
+            const downloadId = data.id;
+            const progressContainer = document.getElementById(`apk-progress-container-${downloadId}`);
+            if (progressContainer) {
+                const progressText = document.getElementById(`apk-progress-text-${downloadId}`);
+                progressText.innerText = '失败!';
+                progressContainer.classList.add('error');
+                setTimeout(() => progressContainer.remove(), 5000);
+            }
+        });
+
+        window.addEventListener('download.completed', (event) => {
+            console.log('Received download.completed event directly on window:', event.detail);
+            const data = event.detail;
+            const downloadId = data.id;
+            const progressContainer = document.getElementById(`apk-progress-container-${downloadId}`);
+            if (progressContainer) {
+                const progressText = document.getElementById(`apk-progress-text-${downloadId}`);
+                const progressBar = document.getElementById(`apk-progress-bar-${downloadId}`);
+                progressText.innerText = '完成!';
+                progressBar.value = 100;
+                setTimeout(() => progressContainer.remove(), 3000);
+            }
+        });
+
+        window.addEventListener('download.canceled', (event) => {
+            console.log('Received download.canceled event directly on window:', event.detail);
+            const data = event.detail;
+            const canceledId = event.detail.id;
+            const downloadId = data.id;
+               const downloadItem = document.getElementById(`download-item-${canceledId}`);
+                if (downloadItem) {
+                downloadItem.remove();
+                }
+            const progressContainer = document.getElementById(`apk-progress-container-${downloadId}`);
+            if (progressContainer) {
+                const progressText = document.getElementById(`apk-progress-text-${downloadId}`);
+                progressText.innerText = '已取消';
+                setTimeout(() => progressContainer.remove(), 3000);
+            }
+        });
+
+        window.addEventListener('m3u8_download_progress', function(event) {
+            console.log('M3U8 Download Progress:', event.detail);
+            const data = event.detail;
+            const downloadId = data.id;
+            const el=document.getElementById('downloadResult');
+
+            if (!downloadId) {
+                console.error('M3U8 progress event is missing a download ID.');
+                return;
+            }
+
+            const progressBar = document.getElementById(`m3u8-progress-bar-${downloadId}`);
+            const progressText = document.getElementById(`m3u8-progress-text-${downloadId}`);
+            const progressContainer = document.getElementById(`m3u8-progress-container-${downloadId}`);
+
+            if (!progressBar || !progressText || !progressContainer) {
+                // Progress bar might have been removed already (e.g., on completion/failure)
+                return;
+            }
+
+            if (data.status === 'downloading') {
+                if (data.progress) {
+                    progressBar.value = data.progress;
+                    progressText.innerText = `${data.progress}%`;
+                } else if (data.processed_time) {
+                    progressText.innerText = `已处理 ${Math.round(data.processed_time / 1000)} 秒`;
+                }
+            } else if (data.status === 'completed') {
+                progressText.innerText = '完成!';
+                progressBar.value = 100;
+                el.innerHTML = `M3U8 下载合并成功！本地路径: ${data.path}`;
+                el.className = 'result success';
+                // Optionally remove the progress bar after a short delay
+                setTimeout(() => progressContainer.remove(), 3000);
+            } else if (data.status === 'failed') {
+                progressText.innerText = `失败: ${data.error}`;
+                progressContainer.classList.add('error');
+                el.innerHTML = `M3U8 下载合并失败: ${data.error}`;
+                el.className = 'result error';
+                // Optionally remove the progress bar after a short delay
+                setTimeout(() => progressContainer.remove(), 5000);
+            }
+        });
+
+        window.addEventListener('download.progress', (event) => {
+            console.log('Received download.progress event directly on window:', event.detail);
+            const data = event.detail;
+            const downloadId = data.id;
+            const progressBar = document.getElementById(`apk-progress-bar-${downloadId}`);
+            const progressText = document.getElementById(`apk-progress-text-${downloadId}`);
+
+            if (progressBar && progressText) {
+                progressBar.value = data.progress;
+                progressText.innerText = `${data.progress}% (${data.speed})`;
+            }
+        });
+
+        // Global listener for any M3U8 download completion
+        window.addEventListener('m3u8_download_progress', function(event) {
+            const data = event.detail;
+            if (data.status === 'completed') {
+                console.log(`Global listener: M3U8 download completed for id ${data.id}. Updating player.`);
+                const el = document.getElementById('downloadResult');
+                if (player) {
+                    player.src({ type: 'application/x-mpegURL', src: data.path });
+                }
+                el.innerHTML = `视频下载完成，已加载本地文件: ${data.path}`;
+                el.className = 'result success';
+            }
+        });
+
+
+
+</script>
+<div class="container">
+    <h1>🚀 AppBridgeH5 SDK 演示</h1>
+
+    <div id="status" class="status">
+        <div>正在初始化 SDK...</div>
+    </div>
+
+    <div class="section">
+        <h2>1. 核心功能</h2>
+        <button class="button" onclick="checkInit()">检查初始化状态</button>
+        <button class="button" onclick="getVersion()">获取版本信息</button>
+        <button class="button" onclick="getCapabilities()">获取可用功能</button>
+        <button class="button" onclick="getEnv()">获取环境信息</button>
+        <button class="button" onclick="hasMethod()">探测方法是否存在</button>
+        <button class="button" onclick="vpnOn()">开启VPN(示例)</button>
+        <button class="button" onclick="vpnOff()">关闭VPN</button>
+        <button class="button" onclick="addShortcut()">添加快捷方式</button>
+        <button class="button" onclick="switchAppIcon()">切换图标(示例)</button>
+
+        <div id="coreResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. 事件系统</h2>
+        <button class="button" onclick="startEventListen()">开始监听事件</button>
+        <button class="button" onclick="stopEventListen()">停止监听事件</button>
+        <button class="button" onclick="emitTestEvent()">触发测试事件</button>
+        <div id="eventResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. App 能力</h2>
+        <button class="button" onclick="appGetStatus()">获取状态</button>
+        <button class="button" onclick="appOpenSettings()">打开系统设置</button>
+        <button class="button" onclick="appMinimize()">最小化</button>
+        <button class="button" onclick="appExit()">退出</button>
+        <button class="button" onclick="appUpdateCheck()">检查更新</button>
+        <button class="button" onclick="appUpdateApply()">执行更新</button>
+        <div id="appResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. 导航控制</h2>
+        <button class="button" onclick="navOpen()">打开页面</button>
+        <button class="button" onclick="navSetTitle()">设置标题</button>
+        <button class="button" onclick="navSetBars()">设置导航栏</button>
+        <div id="navResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>5. UI 组件</h2>
+        <button class="button" onclick="showToast()">显示 Toast</button>
+        <button class="button" onclick="showAlert()">显示 Alert</button>
+        <button class="button" onclick="showConfirm()">显示 Confirm</button>
+        <button class="button" onclick="showActionSheet()">显示 ActionSheet</button>
+        <button class="button" onclick="showLoading()">显示 Loading</button>
+        <button class="button" onclick="doHaptics()">震动反馈</button>
+        <button class="button" onclick="getSafeArea()">获取安全区域</button>
+        <div id="uiResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>6. 存储功能</h2>
+        <button class="button" onclick="setStorage()">设置存储</button>
+        <button class="button" onclick="getStorage()">获取存储</button>
+        <button class="button" onclick="removeStorage()">删除存储</button>
+        <button class="button" onclick="clearStorageApp()">清空存储(app)</button>
+        <button class="button" onclick="clearStorageWebview()">清空存储(webview)</button>
+        <div id="storageResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>7. 权限管理</h2>
+        <button class="button" onclick="checkPermission()">检查相机权限</button>
+        <button class="button" onclick="requestPermission()">请求相机权限</button>
+        <button class="button" onclick="ensurePermission()">ensure并执行</button>
+        <div id="permissionResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>8. 设备信息</h2>
+        <button class="button" onclick="getDeviceIds()">获取设备ID</button>
+        <button class="button" onclick="getDeviceInfo()">获取设备信息</button>
+        <button class="button" onclick="getBatteryInfo()">获取电池信息</button>
+        <button class="button" onclick="getStorageInfo()">获取存储信息</button>
+        <button class="button" onclick="getMemoryInfo()">获取内存信息</button>
+        <button class="button" onclick="getCpuInfo()">获取CPU信息</button>
+        <div id="deviceResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>9. 分享 / 剪贴板</h2>
+        <button class="button" onclick="shareContent()">分享内容</button>
+        <button class="button" onclick="copyLink()">复制链接</button>
+        <button class="button" onclick="clipboardSet()">剪贴板写入</button>
+        <button class="button" onclick="clipboardGet()">剪贴板读取</button>
+        <div id="shareResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>10. 通知</h2>
+        <button class="button" onclick="checkNotificationPermission()">检查通知权限</button>
+        <button class="button" onclick="requestNotificationPermission()">请求通知权限</button>
+        <button class="button" onclick="showLocalNotification()">显示本地通知</button>
+        <div id="notificationResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>11. 认证 / 支付</h2>
+        <button class="button" onclick="authGetToken()">获取Token</button>
+        <button class="button" onclick="authRefreshToken()">刷新Token</button>
+        <button class="button" onclick="paymentPay()">发起支付(示例)</button>
+        <div id="authResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>12. 下载 / APK / 缓存</h2>
+        <button class="button" onclick="downloadStart()">开始下载</button>
+        <button class="button" onclick="downloadStatus()">下载状态</button>
+        <button class="button" onclick="downloadPause()">暂停下载</button>
+        <button class="button" onclick="downloadResume()">恢复下载</button>
+        <button class="button" onclick="downloadCancel()">取消下载</button>
+        <button class="button" onclick="downloadList()">下载任务列表</button>
+        <button class="button" onclick="downloadM3u8()">下载m3u8</button>
+        <button class="button" onclick="downloadGetDefaultDir()">获取默认下载目录</button>
+        <button class="button" onclick="downloadSetDefaultDir()">设置默认下载目录</button>
+        <button class="button" onclick="downloadGetFilePath()">获取任务文件路径</button>
+        <button class="button" onclick="apkDownload()">APK下载</button>
+        <button class="button" onclick="apkInstall()">安装APK</button>
+        <button class="button" onclick="apkOpen()">打开App</button>
+        <button class="button" onclick="apkIsInstalled()">是否安装</button>
+        <button class="button" onclick="cacheGetSize()">缓存大小</button>
+        <button class="button" onclick="cacheClear()">清理缓存</button>
+
+        <div id="apk-downloads-container"></div>
+        <div id="m3u8-downloads-container"></div>
+
+        <div id="downloadResult" class="result"></div>
+        <div style="margin-top: 20px;">
+            <h3>M3U8 播放器</h3>
+            <video id="m3u8VideoPlayer"
+                   class="video-js vjs-default-skin vjs-big-play-centered vjs-fluid" controls
+                   preload="auto" data-setup="{}" autoplay muted></video>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>14. AppStore / TestFlight (iOS)</h2>
+        <button class="button" onclick="appStoreOpen()">打开AppStore</button>
+        <button class="button" onclick="appStoreSearch()">AppStore搜索</button>
+        <button class="button" onclick="testFlightOpen()">打开TestFlight邀请</button>
+        <div id="iosResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>15. DeepLink</h2>
+        <button class="button" onclick="deeplinkOpen()">打开DeepLink</button>
+        <button class="button" onclick="deeplinkParse()">解析DeepLink</button>
+        <div id="deeplinkResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>16. LiveActivity</h2>
+        <button class="button" onclick="liveStart()">开始实况</button>
+        <button class="button" onclick="liveUpdate()">更新实况</button>
+        <button class="button" onclick="liveStop()">停止实况</button>
+        <div id="liveResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>17. 视频</h2>
+        <button class="button" onclick="openVideo()">打开视频</button>
+        <div id="videoResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>18. 小说</h2>
+        <button class="button" onclick="openNovel()">打开小说</button>
+        <div id="novelResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>19. 漫画</h2>
+        <button class="button" onclick="openComic()">打开漫画</button>
+        <div id="comicResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>20. 帖子</h2>
+        <button class="button" onclick="openPost()">打开帖子</button>
+        <div id="postResult" class="result"></div>
+    </div>
+
+    <!-- <div class="section">
+         <h2>21. 直播</h2>
+         <button class="button" onclick="startLive()">开始直播</button>
+         <button class="button" onclick="stopLive()">停止直播</button>
+         <button class="button" onclick="playLive()">播放直播</button>
+         <button class="button" onclick="pauseLive()">暂停直播</button>
+         <div id="liveResult" class="result"></div>
+     </div>-->
+</div>
+
+<script>
+        // MethodChannel listener for events from Flutter
+        // if (window.flutter_inappwebview) {
+        //     window.flutter_inappwebview.addEventListener('flutterInAppWebViewPlatformReady', function(event) {
+        //         window.flutter_inappwebview.callHandler('com.example.appbridge_h5/webview_events', function(method, args) {
+        //             if (method === 'dispatchEvent') {
+        //                 const eventName = args.event;
+        //                 const payload = args.payload;
+        //                 window.dispatchEvent(new CustomEvent(eventName, { detail: payload }));
+        //             }
+        //         });
+        //     });
+        // }
+
+        let eventUnsubscribe = null;
+
+        function flutterIsReady() {
+            console.log("flutterIsReady() called by Flutter. Starting SDK initialization.");
+            initSDK();
+        }
+
+        async function initSDK() {
+            console.log("initSDK: Function started.");
+            const status = document.getElementById('status');
+
+            // Utility function for promise timeouts
+            function withTimeout(promise, ms, timeoutError = new Error('Promise timed out')) {
+                let id;
+                const timeout = new Promise((resolve, reject) => {
+                    id = setTimeout(() => reject(timeoutError), ms);
+                });
+                return Promise.race([
+                    promise.then((res) => { clearTimeout(id); return res; }),
+                    timeout
+                ]);
+            }
+
+            try {
+                if (typeof AppBridge === 'undefined') {
+                    console.error("initSDK: AppBridge SDK is undefined.");
+                    throw new Error('AppBridge SDK 未加载');
+                }
+
+                console.log("initSDK: AppBridge is defined. Calling AppBridge.core.ready() with timeout.");
+                await withTimeout(AppBridge.core.ready(), 5000, new Error('AppBridge.core.ready() timed out after 5 seconds.')); // 5-second timeout
+                console.log("initSDK: AppBridge.core.ready() resolved. Calling AppBridge.core.getVersion() with timeout.");
+
+                const versionResult = await withTimeout(AppBridge.core.getVersion(), 5000, new Error('AppBridge.core.getVersion() timed out after 5 seconds.')); // 5-second timeout
+                console.log("initSDK: AppBridge.core.getVersion() resolved with:", versionResult);
+
+                status.innerHTML = `
+                    <div>✅ SDK 初始化成功！</div>
+                    <div>版本: ${versionResult.data?.bridgeVersion || '未知'}</div>
+                `;
+                status.className = 'status success';
+                AppBridge.events.emit('ready', { timestamp: Date.now() });
+                console.log("initSDK: AppBridge.events.emit(\'ready\') called. Initialization complete.");
+            } catch (error) {
+                console.error("AppBridgeH5 initialization failed:", error);
+                status.innerHTML = `
+                    <div>❌ SDK 初始化失败</div>
+                    <div>${error.msg || error.message || JSON.stringify(error)}</div>
+                `;
+                status.className = 'status error';
+            }
+        }
+        // 2. 事件系统
+        async function startEventListen() {
+            const eventResultElement = document.getElementById('eventResult');
+            try {
+                const subscription = await AppBridge.events.on('ready', (data) => {
+                    const result = document.getElementById('eventResult');
+                    result.innerHTML += `收到 ready 事件: ${JSON.stringify(data)}
+`;
+                });
+                window.eventUnsubscribe = subscription;
+
+                AppBridge.events.on('test', (data) => {
+                    const result = document.getElementById('eventResult');
+                    result.innerHTML += `收到 test 事件: ${JSON.stringify(data)}
+`;
+                });
+                eventResultElement.innerHTML += '开始监听事件...\n';
+                eventResultElement.className = 'result success';
+            } catch (error) {
+                eventResultElement.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                eventResultElement.className = 'result error';
+            }
+        }
+
+        function stopEventListen() {
+            const result = document.getElementById('eventResult');
+            try {
+                if (window.eventUnsubscribe && typeof window.eventUnsubscribe.off === 'function') {
+                    window.eventUnsubscribe.off();
+                    window.eventUnsubscribe = null;
+                }
+                result.innerHTML += '停止监听事件\n';
+                result.className = 'result success';
+            } catch (error) {
+                result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                result.className = 'result error';
+            }
+        }
+
+        function emitTestEvent() {
+            const result = document.getElementById('eventResult');
+            try {
+                AppBridge.events.emit('test', { message: 'Hello from test event!', timestamp: Date.now() });
+                result.innerHTML += '触发测试事件\n';
+                result.className = 'result success';
+            } catch (error) {
+                result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                result.className = 'result error';
+            }
+        }
+
+        // 1. 核心功能
+        async function checkInit() {
+            const result = document.getElementById('coreResult');
+            try {
+                const isReady = AppBridge.isReady ? AppBridge.isReady() : 'SDK已加载';
+                const readyResult = await AppBridge.core.ready();
+                result.innerHTML = `初始化状态: ${isReady}\nReady 结果: ${JSON.stringify(readyResult, null, 2)}`;
+                result.className = 'result success';
+            } catch (error) {
+                result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                result.className = 'result error';
+            }
+        }
+
+        async function getVersion() {
+            const result = document.getElementById('coreResult');
+            try {
+                const versionResult = await AppBridge.core.getVersion();
+                result.innerHTML = `版本信息:\n${JSON.stringify(versionResult, null, 2)}`;
+                result.className = 'result success';
+            } catch (error) {
+                result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                result.className = 'result error';
+            }
+        }
+
+        async function getCapabilities() {
+            const result = document.getElementById('coreResult');
+            try {
+                const capabilitiesResult = await AppBridge.core.getCapabilities();
+                result.innerHTML = `可用功能:\n${JSON.stringify(capabilitiesResult, null, 2)}`;
+                result.className = 'result success';
+            } catch (error) {
+                result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                result.className = 'result error';
+            }
+        }
+
+        async function getEnv() {
+            const result = document.getElementById('coreResult');
+            try {
+                const envResult = await (AppBridge.core?.getEnv ? AppBridge.core.getEnv() : Promise.resolve({ code: 0, data: {}, msg: 'mock' }));
+                result.innerHTML = `环境信息:\n${JSON.stringify(envResult, null, 2)}`;
+                result.className = 'result success';
+            } catch (error) {
+                result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                result.className = 'result error';
+            }
+        }
+
+        async function hasMethod() {
+            const result = document.getElementById('coreResult');
+            try {
+                const r = await (AppBridge.core?.has ? AppBridge.core.has('device.getInfo') : { code: 0, data: true });
+                result.innerHTML = `has('device.getInfo'): ${JSON.stringify(r, null, 2)}`;
+                result.className = 'result success';
+            } catch (error) {
+                result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`;
+                result.className = 'result error';
+            }
+        }
+
+        async function vpnOn() {
+            const result = document.getElementById('coreResult');
+            try {
+                const r = await (AppBridge.core?.setVpn ? AppBridge.core.setVpn({ on: true, config: { server: 'vpn.example.com', port: 443, protocol: 'IKEv2', username: 'user', password: '***' } }) : { code: 0, data: true });
+                result.innerHTML = `VPN 开启: ${JSON.stringify(r, null, 2)}`;
+                result.className = 'result success';
+            } catch (e) { result.innerHTML = `错误: ${e.msg || e.message || JSON.stringify(e)}`; result.className = 'result error'; }
+        }
+
+        async function vpnOff() {
+            const result = document.getElementById('coreResult');
+            try {
+                const r = await (AppBridge.core?.setVpn ? AppBridge.core.setVpn({ on: false }) : { code: 0, data: true });
+                result.innerHTML = `VPN 关闭: ${JSON.stringify(r, null, 2)}`;
+                result.className = 'result success';
+            } catch (e) { result.innerHTML = `错误: ${e.msg || e.message || JSON.stringify(e)}`; result.className = 'result error'; }
+        }
+
+        async function addShortcut() {
+            const result = document.getElementById('coreResult');
+            try {
+                const r = await (AppBridge.core?.addShortcuts ? AppBridge.core.addShortcuts({ title: 'Bridge Demo', url: location.href }) : { code: 0, data: true });
+                result.innerHTML = `添加快捷方式: ${JSON.stringify(r, null, 2)}`;
+                result.className = 'result success';
+            } catch (e) { result.innerHTML = `错误: ${e.msg || e.message || JSON.stringify(e)}`; result.className = 'result error'; }
+        }
+
+        // 3. App 能力
+        async function appGetStatus() { const el=document.getElementById('appResult'); try{ const r=await (AppBridge.app?.getStatus?AppBridge.app.getStatus():{code:0,data:{}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function appOpenSettings() { const el=document.getElementById('appResult'); try{ const r=await (AppBridge.app?.openSettings?AppBridge.app.openSettings('general'):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function appMinimize() { const el=document.getElementById('appResult'); try{ const r=await (AppBridge.app?.minimize?AppBridge.app.minimize():{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function appExit() { const el=document.getElementById('appResult'); try{ const r=await (AppBridge.app?.exit?AppBridge.app.exit():{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function appUpdateCheck() { const el=document.getElementById('appResult'); try{ const r=await (AppBridge.app?.update?.check?AppBridge.app.update.check():{code:0,data:{hasUpdate:false}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function appUpdateApply() { const el=document.getElementById('appResult'); try{ const r=await (AppBridge.app?.update?.apply?AppBridge.app.update.apply():{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 4. Nav
+        async function navOpen(){
+            console.log('>>> JS navOpen() called at ' + new Date().toISOString() + ' <<<'); // Add log
+            const el=document.getElementById('navResult'); try{ const r=await (AppBridge.nav?.open?AppBridge.nav.open({ url:'file:///android_asset/flutter_assets/packages/appbridge/assets/navigation_test.html', title:'导航控制'}):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function navClose(){ const el=document.getElementById('navResult'); try{ const r=await (AppBridge.nav?.close?AppBridge.nav.close({ steps:1 }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function navReplace(){ const el=document.getElementById('navResult'); try{ const r=await (AppBridge.nav?.replace?AppBridge.nav.replace({ url:'https://developer.chrome.com/?hl=zh-cn' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function navSetTitle(){ const el=document.getElementById('navResult'); try{ let titleToSet = ''; if (!isCustomTitleSet) { titleToSet = '设置标题'; } else { titleToSet = 'JS插件Demo'; } const r=await (AppBridge.nav?.setTitle?AppBridge.nav.setTitle({ title:titleToSet, subtitle:'副标题' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; isCustomTitleSet = !isCustomTitleSet; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function navSetBars(){ const el=document.getElementById('navResult'); try{ isNavBarsVisible = !isNavBarsVisible; const r=await (AppBridge.nav?.setBars?AppBridge.nav.setBars({ visible:isNavBarsVisible, color:'#ffffff', style:'dark' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 5. UI 功能
+        async function showToast() {
+            const result = document.getElementById('uiResult');
+            try { const toastResult = await AppBridge.ui.toast({ text: 'Hello AppBridgeH5! 🎉' }); result.innerHTML = `Toast 结果: ${JSON.stringify(toastResult, null, 2)}`; result.className = 'result success'; } catch (error) { result.innerHTML = `错误: ${error.msg || error.message || JSON.stringify(error)}`; result.className = 'result error'; }
+        }
+        async function showAlert() { const el=document.getElementById('uiResult'); try{ const r=await AppBridge.ui.alert({ title:'提示', message:'这是一个警告弹窗' }); el.innerHTML=`Alert 结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function showConfirm() { const el=document.getElementById('uiResult'); try{ const r=await AppBridge.ui.confirm({ title:'确认', message:'确定要执行此操作吗？' }); el.innerHTML=`Confirm 结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function showActionSheet() { const el=document.getElementById('uiResult'); try{ const r=await AppBridge.ui.actionSheet({ title:'选择操作', items:[{id:'option1',text:'选项 1'},{id:'option2',text:'选项 2'}]}); el.innerHTML=`ActionSheet 结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function showLoading() { const el=document.getElementById('uiResult'); try{ const r=await AppBridge.ui.loading({ visible:true, text:'加载中...' }); el.innerHTML=`Loading 结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; setTimeout(async()=>{ await AppBridge.ui.loading({ visible:false }); },3000); }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function doHaptics() { const el=document.getElementById('uiResult'); try{ const r=await (AppBridge.ui?.haptics?AppBridge.ui.haptics({ style:'medium' }):{code:0,data:true}); el.innerHTML=`Haptics 结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function getSafeArea() { const el=document.getElementById('uiResult'); try{ const r=await (AppBridge.ui?.safeArea?AppBridge.ui.safeArea():{code:0,data:{ top:0,bottom:0,left:0,right:0 }}); el.innerHTML=`SafeArea: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 6. 存储
+        async function setStorage() { const el=document.getElementById('storageResult'); try{ const r=await AppBridge.storage.set({ key:'demo_key', value:{ message:'Hello Storage!', timestamp:Date.now() }, ttlSec:3600 }); el.innerHTML=`设置存储结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function getStorage() { const el=document.getElementById('storageResult'); try{ const r=await AppBridge.storage.get({ key:'demo_key' }); el.innerHTML=`获取存储结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function removeStorage() { const el=document.getElementById('storageResult'); try{ const r=await AppBridge.storage.remove({ key:'demo_key' }); el.innerHTML=`删除存储结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function clearStorageApp() { const el=document.getElementById('storageResult'); try{ const r=await (AppBridge.storage?.clear?AppBridge.storage.clear({ scope:'app' }):{code:0,data:true}); el.innerHTML=`清空(app)结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function clearStorageWebview() { const el=document.getElementById('storageResult'); try{ const r=await (AppBridge.storage?.clear?AppBridge.storage.clear({ scope:'webview' }):{code:0,data:true}); el.innerHTML=`清空(webview)结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+      // 7. 权限
+        async function checkPermission() { const el=document.getElementById('permissionResult'); try{ const r=await AppBridge.permission.check({ name:'camera' }); el.innerHTML=`相机权限状态: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function requestPermission() { const el=document.getElementById('permissionResult'); try{ const r=await AppBridge.permission.request({ name:'camera' }); el.innerHTML=`请求相机权限结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function ensurePermission() { const el=document.getElementById('permissionResult'); try{ const r=await (AppBridge.permission?.ensure?AppBridge.permission.ensure('camera', function(){ console.log('granted'); }):{code:0,data:true}); el.innerHTML=`ensure 结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+
+        // 8. 设备
+        async function getDeviceIds() { const el=document.getElementById('deviceResult'); try{ const r=await AppBridge.device.getIds(); el.innerHTML=`设备ID:\n${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function getDeviceInfo() { const el=document.getElementById('deviceResult'); try{ const r=await AppBridge.device.getInfo(); el.innerHTML=`设备信息:\n${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function getBatteryInfo() { const el=document.getElementById('deviceResult'); try{ const r=await AppBridge.device.getBattery(); el.innerHTML=`电池信息:\n${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function getStorageInfo() { const el=document.getElementById('deviceResult'); try{ const r=await AppBridge.device.getStorageInfo(); el.innerHTML=`存储信息:\n${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function getMemoryInfo() { const el=document.getElementById('deviceResult'); try{ const r=await (AppBridge.device?.getMemoryInfo?AppBridge.device.getMemoryInfo():{code:0,data:{}}); el.innerHTML=`内存信息:\n${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function getCpuInfo() { const el=document.getElementById('deviceResult'); try{ const r=await (AppBridge.device?.getCpuInfo?AppBridge.device.getCpuInfo():{code:0,data:{}}); el.innerHTML=`CPU信息:\n${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 9. 分享 / 剪贴板
+        async function shareContent() { const el=document.getElementById('shareResult'); try{ const r=await AppBridge.share.open({ text:'分享标题', url:'https://google.com', image:'https://via.placeholder.com/300x200' }); el.innerHTML=`分享结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function copyLink() { const el=document.getElementById('shareResult'); try{ const r=await (AppBridge.share?.copyLink?AppBridge.share.copyLink({ url:location.href }):{code:0,data:true}); el.innerHTML=`复制链接结果: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function clipboardSet() { const el=document.getElementById('shareResult'); try{ let r; if (AppBridge.clipboard?.set) r=await AppBridge.clipboard.set({ text:'这是要复制的文本内容' }); else if (navigator.clipboard){ await navigator.clipboard.writeText('这是要复制的文本内容'); r={code:0,data:true}; } else r={code:-1,msg:'clipboard not available'}; el.innerHTML=`剪贴板写入: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function clipboardGet() { const el=document.getElementById('shareResult'); try{ let r; if (AppBridge.clipboard?.get) r=await AppBridge.clipboard.get(); else if (navigator.clipboard){ const t=await navigator.clipboard.readText(); r={code:0,data:{text:t}}; } else r={code:-1,msg:'clipboard not available'}; el.innerHTML=`剪贴板内容: ${JSON.stringify(r,null,2)}`; el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 10. Notifications
+        async function checkNotificationPermission() {
+            const resultDiv = document.getElementById('notificationResult');
+            try {
+                const result = await window.AppBridge.permission.check({ name: 'notifications' });
+                if (result.code === 0 && result.data === true) {
+                    resultDiv.innerHTML = '通知权限已经授予。';
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = '通知权限尚未授予。';
+                    resultDiv.className = 'result warning';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `检查权限时发生错误: ${error.msg || error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function requestNotificationPermission() {
+            const resultDiv = document.getElementById('notificationResult');
+            try {
+                const result = await window.AppBridge.permission.request({ name: 'notifications' });
+                if (result.code === 0 && result.data === true) {
+                    resultDiv.innerHTML = '通知权限已成功请求。';
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = '通知权限请求被拒绝。';
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `请求权限时发生错误: ${error.msg || error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function showLocalNotification() {
+
+            const el = document.getElementById('notificationResult');
+            try {
+                const permissionResult = await AppBridge.notifications.checkPermission();
+                if (permissionResult.data === true) {
+                     // If permission is granted, show the notification
+                    const notificationTitle = '这是一个本地通知';
+                    const notificationBody = '这是通知的内容。';
+                    const showResult = await AppBridge.notifications.showLocal({
+                        id: 'local_1',
+                        title: notificationTitle,
+                        body: notificationBody,
+                        payload: {
+                            customData: '123',
+                            title: notificationTitle,
+                            body: notificationBody,
+                        }
+                    });
+                    el.innerHTML = `通知权限已授予，本地通知结果: ${JSON.stringify(showResult, null, 2)}`;
+                    el.className = 'result success';
+                } else {
+                    el.innerHTML = `通知权限未授予，请在系统设置中开启。`;
+                    el.className = 'result error';
+                    // The Flutter side will open app settings if permission is not granted
+                 }
+             }
+             catch (error) {
+                el.innerHTML = `显示通知时发生错误: ${error.msg || error.message}`;
+                el.className = 'result error';
+            }
+        }
+
+        window.addEventListener('notifications.click', (event) => {
+            console.log('Received notifications.click event directly on window:', event.detail);
+            const data = event.detail;
+            const el = document.getElementById('notificationResult');
+            const payload = data.payload;
+            if (payload) {
+                el.innerHTML = `用户点了通知：内容: ${JSON.stringify(payload, null, 2)}`;
+                el.className = 'result success';
+            } else {
+                el.innerHTML = `用户点了通知，但没有获取到内容。`;
+                el.className = 'result warning';
+            }
+        });
+
+        // 11. Auth / Payment
+        async function authGetToken(){ const el=document.getElementById('authResult'); try{ const r=await (AppBridge.auth?.getToken?AppBridge.auth.getToken():{code:0,data:{token:'mock'}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function authRefreshToken(){ const el=document.getElementById('authResult'); try{ const r=await (AppBridge.auth?.refreshToken?AppBridge.auth.refreshToken():{code:0,data:{token:'mock2'}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function paymentPay(){ const el=document.getElementById('authResult'); try{ const r=await (AppBridge.payment?.pay?AppBridge.payment.pay({ productId:'prod_001', payType:'wxpay' }):{code:0,data:{status:'success'}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 12. Download / APK / Cache
+        async function downloadStart(){
+            const el=document.getElementById('downloadResult');
+            try{
+                const url = 'https://apk.loapk.com/51dongman_android/yjdm_01_2.28.apk';
+                const r = await (AppBridge.download?.start?AppBridge.download.start({ url: url }):{code:0,data:{id:'mock_id'}});
+                if (r.code === 0 && r.data && r.data.id) {
+                    const downloadId = r.data.id;
+                    currentDownloadTaskId = downloadId;
+
+                    // Create and append the new progress bar
+                    const container = document.getElementById('apk-downloads-container');
+                    const progressDiv = document.createElement('div');
+                    progressDiv.id = `apk-progress-container-${downloadId}`;
+                    progressDiv.className = 'result'; // Reuse some styling
+                    progressDiv.innerHTML = `
+                        <div><strong>APK 下载:</strong> ${url.substring(url.lastIndexOf('/') + 1)}</div>
+                        <progress id="apk-progress-bar-${downloadId}" value="0" max="100" style="width: 100%;"></progress>
+                        <div id="apk-progress-text-${downloadId}">0%</div>
+                    `;
+                    container.appendChild(progressDiv);
+                }
+                el.innerHTML=JSON.stringify(r,null,2);
+                el.className='result success';
+            }catch(e){
+                el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`;
+                el.className='result error';
+            }
+        }
+        async function downloadStatus(){ const el=document.getElementById('downloadResult'); try{ if (!currentDownloadTaskId) { el.innerHTML=`错误: 请先开始下载任务`; el.className='result error'; return; } const r=await (AppBridge.download?.status?AppBridge.download.status({ id:currentDownloadTaskId }):{code:0,data:{status:'mock'}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function downloadPause(){ const el=document.getElementById('downloadResult'); try{ if (!currentDownloadTaskId) { el.innerHTML=`错误: 请先开始下载任务`; el.className='result error'; return; } const r=await (AppBridge.download?.pause?AppBridge.download.pause({ id:currentDownloadTaskId }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function downloadResume(){ const el=document.getElementById('downloadResult'); try{ if (!currentDownloadTaskId) { el.innerHTML=`错误: 请先开始下载任务`; el.className='result error'; return; } const r=await (AppBridge.download?.resume?AppBridge.download.resume({ id:currentDownloadTaskId }):{code:0,data:true}); if (r.code === 0 && r.data && r.data.id) { currentDownloadTaskId = r.data.id; } el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function downloadCancel(){ const el=document.getElementById('downloadResult'); try{ if (!currentDownloadTaskId) { el.innerHTML=`错误: 请先开始下载任务`; el.className='result error'; return; } const r=await (AppBridge.download?.cancel?AppBridge.download.cancel({ id:currentDownloadTaskId }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function downloadList(){ const el=document.getElementById('downloadResult'); try{ const r=await (AppBridge.download?.list?AppBridge.download.list():{code:0,data:[]}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function downloadM3u8(){
+            const el=document.getElementById('downloadResult');
+            try{
+                const m3u8Url = prompt("请输入M3U8视频地址:", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
+                if (!m3u8Url) {
+                    el.innerHTML = '用户取消了输入。';
+                    el.className = 'result';
+                    return;
+                }
+
+                if (player) {
+                    player.src({ type: 'application/x-mpegURL', src: m3u8Url });
+                }
+
+                const durationStr = prompt("请输入视频总时长（秒）:", "634");
+                const duration = parseInt(durationStr, 10) || 0;
+
+                const confirmDownload = confirm(`确定要下载并合并此M3U8视频吗？\n地址: ${m3u8Url}`);
+                if (!confirmDownload) {
+                    el.innerHTML = '用户取消了下载。';
+                    el.className = 'result';
+                    return;
+                }
+
+                const downloadId = `m3u8-${Date.now()}`;
+
+                // Create and append the new progress bar
+                const container = document.getElementById('m3u8-downloads-container');
+                const progressDiv = document.createElement('div');
+                progressDiv.id = `m3u8-progress-container-${downloadId}`;
+                progressDiv.className = 'result'; // Reuse some styling
+                progressDiv.innerHTML = `
+                    <div><strong>M3U8 下载:</strong> ${m3u8Url.substring(m3u8Url.lastIndexOf('/') + 1)}</div>
+                    <progress id="m3u8-progress-bar-${downloadId}" value="0" max="100" style="width: 100%;"></progress>
+                    <div id="m3u8-progress-text-${downloadId}">0%</div>
+                `;
+                container.appendChild(progressDiv);
+
+                el.innerHTML = '开始下载和合并 M3U8...';
+                el.className = 'result';
+
+                // Initiate the download, but don't await its final result here
+                AppBridge.download.m3u8({ id: downloadId, url: m3u8Url, duration: duration });
+
+            } catch (e){
+                el.innerHTML=`下载m3u8错误信息: ${e.msg || e.message || JSON.stringify(e)}`;
+                el.className='result error';
+            }
+        }
+        async function downloadGetDefaultDir(){ const el=document.getElementById('downloadResult'); try{ const r=await (AppBridge.download?.getDefaultDir?AppBridge.download.getDefaultDir():{code:0,data:'/download'}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function downloadSetDefaultDir(){ const el=document.getElementById('downloadResult'); try{ const r=await (AppBridge.download?.setDefaultDir?AppBridge.download.setDefaultDir({ path:'/storage/emulated/0/Download' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function downloadGetFilePath(){ const el=document.getElementById('downloadResult'); try{ if (!currentDownloadTaskId) { el.innerHTML=`错误: 请先开始下载任务`; el.className='result error'; return; } const r=await (AppBridge.download?.getFilePath?AppBridge.download.getFilePath({ id:currentDownloadTaskId }):{code:0,data:'/storage/emulated/0/Download/file'}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        async function apkDownload(){
+            const el=document.getElementById('downloadResult');
+            try{
+                const url = 'https://apk.loapk.com/51dongman_android/yjdm_01_2.28.apk';
+                const r = await (AppBridge.apk?.download?AppBridge.apk.download({ url: url, id:'yjdm_01_2' }):{code:0,data:true});
+                if (r.code === 0 && r.data && r.data.id) {
+                    const downloadId = r.data.id; // Use the ID returned by the native call
+                    lastDownloadedApkPath = r.data.path;
+
+                    // Create and append the new progress bar
+                    const container = document.getElementById('apk-downloads-container');
+                    const progressDiv = document.createElement('div');
+                    progressDiv.id = `apk-progress-container-${downloadId}`;
+                    progressDiv.className = 'result'; // Reuse some styling
+                    progressDiv.innerHTML = `
+                        <div><strong>APK 下载:</strong> ${url.substring(url.lastIndexOf('/') + 1)}</div>
+                        <progress id="apk-progress-bar-${downloadId}" value="0" max="100" style="width: 100%;"></progress>
+                        <div id="apk-progress-text-${downloadId}">0%</div>
+                    `;
+                    container.appendChild(progressDiv);
+                }
+                el.innerHTML=JSON.stringify(r,null,2);
+                el.className='result success';
+            }catch(e){
+                el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`;
+                el.className='result error';
+            }
+        }
+        async function apkInstall(){ const el=document.getElementById('downloadResult'); try{ if (!lastDownloadedApkPath) { el.innerHTML=`错误: 请先下载APK文件`; el.className='result error'; return; } const r=await (AppBridge.apk?.install?AppBridge.apk.install({ path:lastDownloadedApkPath }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function apkOpen(){ const el=document.getElementById('downloadResult'); try{ const r=await (AppBridge.apk?.open?AppBridge.apk.open({ packageName:'com.google.android.apps.maps' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function apkIsInstalled(){ const el=document.getElementById('downloadResult'); try{ const r=await (AppBridge.apk?.isInstalled?AppBridge.apk.isInstalled({ packageName:'com.google.android.apps.maps' }):{code:0,data:false}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        async function cacheGetSize(){ const el=document.getElementById('downloadResult'); try{ const r=await (AppBridge.cache?.getSize?AppBridge.cache.getSize():{code:0,data:{size:0,unit:'bytes'}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function cacheClear(){ const el=document.getElementById('downloadResult'); try{ const r=await (AppBridge.cache?.clear?AppBridge.cache.clear({ type:'all' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 14. AppStore / TestFlight
+        async function appStoreOpen(){ const el=document.getElementById('iosResult'); try{ const r=await (AppBridge.appstore?.open?AppBridge.appstore.open({ appId:'414478124' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function appStoreSearch(){ const el=document.getElementById('iosResult'); try{ const r=await (AppBridge.appstore?.search?AppBridge.appstore.search({ keyword:'WeChat' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function testFlightOpen(){ const el=document.getElementById('iosResult'); try{ const r=await (AppBridge.testflight?.open?AppBridge.testflight.open({ inviteUrl:'https://testflight.apple.com/join/xxxx' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 15. DeepLink
+        async function deeplinkOpen(){ const el=document.getElementById('deeplinkResult'); try{ const r=await (AppBridge.deeplink?.open?AppBridge.deeplink.open({ url:'googlechrome://navigate?url=https://developer.chrome.com/?hl=zh-cn' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function deeplinkParse(){ const el=document.getElementById('deeplinkResult'); try{ const r=await (AppBridge.deeplink?.parse?AppBridge.deeplink.parse({ url:'googlechrome://navigate?url=https://developer.chrome.com/?hl=zh-cn' }):{code:0,data:{}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        // 16. LiveActivity
+        async function liveStart(){ const el=document.getElementById('liveResult'); try{ const r=await (AppBridge.liveActivity?.start?AppBridge.liveActivity.start({ id:'live_1', title:'进度', progress:0.1 }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function liveUpdate(){ const el=document.getElementById('liveResult'); try{ const r=await (AppBridge.liveActivity?.update?AppBridge.liveActivity.update({ id:'live_1', title:'进度', progress:0.5 }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function liveStop(){ const el=document.getElementById('liveResult'); try{ const r=await (AppBridge.liveActivity?.stop?AppBridge.liveActivity.stop({ id:'live_1' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        async function openComic(){ const el=document.getElementById('comicResult'); try{ const r=await AppBridge.comics.open({ id:'comic_123', title:'演示漫画', url:'https://google.com' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function openNovel(){ const el=document.getElementById('novelResult'); try{ const r=await AppBridge.novel.open({ id:'novel_456', title:'演示小说', url:'https://google.com' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function openVideo(){ const el=document.getElementById('videoResult'); try{ const r=await AppBridge.video.open({ id:'video_789', title:'演示视频播放', url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function openPost(){ const el=document.getElementById('postResult'); try{ const r=await AppBridge.post.open({ id:'post_012', title:'演示帖子', url:'https://google.com' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        async function startLive(){ const el=document.getElementById('liveResult'); try{ const r=await AppBridge.live.start({ id:'live_stream_1', title:'演示直播' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function stopLive(){ const el=document.getElementById('liveResult'); try{ const r=await AppBridge.live.stop({ id:'live_stream_1' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function playLive(){ const el=document.getElementById('liveResult'); try{ const r=await AppBridge.live.play({ id:'live_stream_1' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function pauseLive(){ const el=document.getElementById('liveResult'); try{ const r=await AppBridge.live.pause({ id:'live_stream_1' }); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+
+        async function switchAppIcon() {
+            const result = document.getElementById('coreResult');
+            try {
+                const r = await (AppBridge.core?.appIcon ? AppBridge.core.appIcon({ styleId: 'festival' }) : { code: 0, data: true });
+                result.innerHTML = `切换图标: ${JSON.stringify(r, null, 2)}`;
+                result.className = 'result success';
+            } catch (e) {
+                result.innerHTML = `错误: ${e.msg || e.message || JSON.stringify(e)}`;
+                result.className = 'result error';
+            }
+        }
+
+
+
+
+</script>
+</body>
+</html>

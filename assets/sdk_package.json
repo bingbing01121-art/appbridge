@@ -1,0 +1,48 @@
+{
+  "name": "appbridge-h5",
+  "version": "1.1.0",
+  "description": "统一的 H5 ↔ 原生 SDK 桥接接口，适用于公司所有 App WebView 调用场景",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "h5",
+    "webview",
+    "bridge",
+    "sdk",
+    "mobile",
+    "app",
+    "ios",
+    "android"
+  ],
+  "author": "Your Company",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-company/appbridge-h5.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-company/appbridge-h5/issues"
+  },
+  "homepage": "https://github.com/your-company/appbridge-h5#readme"
+}

@@ -1,0 +1,103 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:appbridge/appbridge.dart'; // Import Appbridge
+
+class NavWebViewScreen extends StatefulWidget {
+  final String url;
+  final String title;
+
+  const NavWebViewScreen({Key? key, required this.url, this.title = '导航控制'}) : super(key: key);
+
+  @override
+  State<NavWebViewScreen> createState() => _NavWebViewScreenState();
+}
+
+class _NavWebViewScreenState extends State<NavWebViewScreen> {
+  InAppWebViewController? _webViewController;
+  // Use the singleton instance
+  final _appbridgePlugin = Appbridge(); // Changed to use singleton
+  String _currentTitle = ''; // New: for dynamic title
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTitle = widget.title; // Initialize with widget title
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The appbridgePlugin.initialize call is now in onWebViewCreated
+  }
+
+  @override
+  void dispose() {
+    // Emit a resume event when returning to the previous screen
+    _appbridgePlugin.emitEvent('app.resume', {});
+
+    if (_webViewController != null) {
+      _appbridgePlugin.unregisterWebViewController(_webViewController!); // Unregister on dispose
+    }
+    _appbridgePlugin.clearContext(); // Clear context when this screen is disposed
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('NavWebViewScreen: build method called.'); // New print statement
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_currentTitle), // Use _currentTitle
+      ),
+      body: InAppWebView(
+        initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+        onWebViewCreated: (controller) {
+          print('NavWebViewScreen: onWebViewCreated called.'); // New print statement
+          _webViewController = controller;
+          _appbridgePlugin.registerWebViewController(_webViewController!); // Register this controller
+
+          // Initialize Appbridge for this WebView
+          _appbridgePlugin.initialize(
+            _webViewController!,
+            context, // Use the context of NavWebViewScreenState
+            onNavClose: () {
+              print('NavWebViewScreen NavCloseCallback: Triggered. Pop current route');
+              Navigator.of(context).pop(); // Pop this screen
+            },
+            onNavReplace: (url, title) {
+              print('NavWebViewScreen NavReplaceCallback: Triggered with url: $url, title: $title');
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => NavWebViewScreen(url: url, title: title),
+                ),
+              );
+            },
+            onNavSetTitle: (title) { // New: Handle setTitle callback
+              setState(() {
+                _currentTitle = title;
+              });
+            },
+            onLoadUrl: (url, title) async {
+              if (_webViewController != null) {
+                if (_appbridgePlugin != null) {
+                  _appbridgePlugin?.nav?.open(url: url, title: title); // Pass the title
+                  _appbridgePlugin?.ui?.toast(message: '加载URL: $url');
+                }
+              } else {
+                print('Error: _webViewController is null when trying to load URL via loadUrl');
+              }
+            },
+            // Other callbacks can be added here if needed for this screen
+          );
+        },
+        onLoadStop: (controller, url) {
+          print('NavWebViewScreen finished loading: $url');
+          // The JavaScript polling for initSDK() is now handled by the web page itself.
+        },
+        onConsoleMessage: (controller, consoleMessage) {
+          print('NavWebViewScreen Console Message: ${consoleMessage.message}');
+        },
+      ),
+    );
+  }
+}
