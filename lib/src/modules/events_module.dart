@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'base_module.dart';
@@ -21,9 +22,8 @@ class EventsModule extends BaseModule {
 
   @override
   Future<BridgeResponse> handleMethod(
-    String action,
-    Map<String, dynamic> params,
-  ) async {
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'on':
         return await _on(params);
@@ -53,8 +53,7 @@ class EventsModule extends BaseModule {
 
     // Return a function to H5 that can be called to unsubscribe
     // This function will be a JS snippet that calls back to Flutter to remove the listener
-    final unsubscribeJs =
-        '''
+    final unsubscribeJs = '''
       (function() {
         const callbackId = '$callbackId';
         const event = '$event';
@@ -82,10 +81,9 @@ class EventsModule extends BaseModule {
     _eventListeners[event]![callbackId] = jsHandler;
 
     // For 'once', we need to wrap the handler to remove itself after execution
-    final wrappedJsHandler =
-        '''
+    final wrappedJsHandler = '''
       (function() {
-        const originalHandler = ${jsHandler};
+        const originalHandler = $jsHandler;
         const callbackId = '$callbackId';
         const event = '$event';
         return function(payload) {
@@ -100,8 +98,7 @@ class EventsModule extends BaseModule {
     _eventListeners[event]![callbackId] =
         wrappedJsHandler; // Store the wrapped handler
 
-    final unsubscribeJs =
-        '''
+    final unsubscribeJs = '''
       (function() {
         const callbackId = '$callbackId';
         const event = '$event';
@@ -118,7 +115,6 @@ class EventsModule extends BaseModule {
 
   Future<BridgeResponse> _emit(Map<String, dynamic> params) async {
     final event = params['event'] as String?;
-    final payload = params['payload'];
 
     if (event == null) {
       return BridgeResponse.error(-1, 'Event name is required');
@@ -130,11 +126,10 @@ class EventsModule extends BaseModule {
         if (jsHandler != null) {
           // Execute the JS handler in the WebView
           await _webViewController?.evaluateJavascript(
-            source:
-                '''
+            source: '''
             (function() {
-              const handler = ${jsHandler};
-              handler(${jsonEncode(payload)});
+              const handler = $jsHandler;
+              handler(${jsonEncode(params['payload'])});
             })();
           ''',
           );

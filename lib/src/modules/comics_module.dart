@@ -1,21 +1,18 @@
+import 'package:flutter/material.dart';
 import 'base_module.dart';
 import '../models/bridge_response.dart';
-import 'package:flutter/material.dart';
 
 typedef LoadUrlCallback = Future<void> Function(String url, String? title);
 
 class ComicsModule extends BaseModule {
-  BuildContext? _context;
   LoadUrlCallback? onLoadUrl;
 
-  ComicsModule(this._context, {this.onLoadUrl});
-
-  void updateContext(BuildContext? context) {
-    _context = context;
-  }
+  ComicsModule({this.onLoadUrl});
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'open':
         return await _openComics(params);
@@ -31,7 +28,8 @@ class ComicsModule extends BaseModule {
     final title = params['title'] as String?;
 
     if (id == null && url == null) {
-      return BridgeResponse.error(-1, 'Either id or url is required to open comics.');
+      return BridgeResponse.error(
+          -1, 'Either id or url is required to open comics.');
     }
 
     if (url != null && url.isNotEmpty) {

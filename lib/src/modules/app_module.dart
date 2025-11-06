@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,17 +12,14 @@ import '../models/bridge_response.dart';
 /// App模块实现
 class AppModule extends BaseModule {
   final MethodChannel _platform;
-  BuildContext? _context;
   AppUpdateInfo? _updateInfo;
 
-  AppModule(this._platform, this._context);
-
-  void updateContext(BuildContext? context) {
-    _context = context;
-  }
+  AppModule(this._platform);
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'getStatus':
         return await _getStatus();
@@ -35,7 +32,18 @@ class AppModule extends BaseModule {
       case 'update.check':
         return await _checkUpdate();
       case 'update':
-        return await _applyUpdate();
+        if (context == null) {
+          return BridgeResponse.error(
+              -1, 'BuildContext is required for app update.');
+        }
+        if (kDebugMode) {
+          if (context.mounted) {
+            // ignore: use_build_context_synchronously
+            _showSimulatedUpdateDialog(context);
+          }
+          return BridgeResponse.success(true);
+        }
+        return await _applyUpdate(context);
       default:
         return BridgeResponse.error(-1, 'Unknown action: $action');
     }
@@ -79,7 +87,8 @@ class AppModule extends BaseModule {
         await _platform.invokeMethod('minimizeApp');
         return BridgeResponse.success(true);
       } else {
-        return BridgeResponse.error(-1, 'Minimize functionality not available on this platform');
+        return BridgeResponse.error(
+            -1, 'Minimize functionality not available on this platform');
       }
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
@@ -99,24 +108,28 @@ class AppModule extends BaseModule {
         final AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
         _updateInfo = updateInfo;
         return BridgeResponse.success({
-          'hasUpdate': updateInfo.updateAvailability == UpdateAvailability.updateAvailable,
+          'hasUpdate': updateInfo.updateAvailability ==
+              UpdateAvailability.updateAvailable,
           'version': updateInfo.availableVersionCode?.toString() ?? '',
         });
       } catch (e) {
         return BridgeResponse.error(-1, e.toString());
       }
     } else {
-      return BridgeResponse.success({'hasUpdate': false, 'message': 'In-app update is only available for Android.'});
+      return BridgeResponse.success({
+        'hasUpdate': false,
+        'message': 'In-app update is only available for Android.'
+      });
     }
   }
 
-  Future<BridgeResponse> _applyUpdate() async {
-    if (kDebugMode) {
-      _showSimulatedUpdateDialog();
-      return BridgeResponse.success(true);
+  Future<BridgeResponse> _applyUpdate(BuildContext context) async {
+    if (!context.mounted) {
+      return BridgeResponse.error(-1, 'Context not mounted.');
     }
     if (Platform.isAndroid) {
-      if (_updateInfo?.updateAvailability == UpdateAvailability.updateAvailable) {
+      if (_updateInfo?.updateAvailability ==
+          UpdateAvailability.updateAvailable) {
         try {
           await InAppUpdate.performImmediateUpdate();
           return BridgeResponse.success(true);
@@ -127,20 +140,22 @@ class AppModule extends BaseModule {
         return BridgeResponse.error(0, 'No update available to apply.');
       }
     } else {
-      return BridgeResponse.error(-1, 'In-app update is only available for Android.');
+      return BridgeResponse.error(
+          -1, 'In-app update is only available for Android.');
     }
   }
 
-  void _showSimulatedUpdateDialog() {
+  void _showSimulatedUpdateDialog(BuildContext context) {
+    if (!context.mounted) return;
     showDialog(
-      context: _context!,
+      context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20.0),
           ),
-          child: _SimulatedUpdateDialogContent(rootContext: _context!),
+          child: _SimulatedUpdateDialogContent(rootContext: context),
         );
       },
     );
@@ -152,10 +167,12 @@ class _SimulatedUpdateDialogContent extends StatefulWidget {
   const _SimulatedUpdateDialogContent({required this.rootContext});
 
   @override
-  _SimulatedUpdateDialogContentState createState() => _SimulatedUpdateDialogContentState();
+  _SimulatedUpdateDialogContentState createState() =>
+      _SimulatedUpdateDialogContentState();
 }
 
-class _SimulatedUpdateDialogContentState extends State<_SimulatedUpdateDialogContent> {
+class _SimulatedUpdateDialogContentState
+    extends State<_SimulatedUpdateDialogContent> {
   bool _isDownloading = false;
   double _progress = 0.0;
   Timer? _timer;
@@ -179,10 +196,12 @@ class _SimulatedUpdateDialogContentState extends State<_SimulatedUpdateDialogCon
           _progress = 1.0;
           // Close the dialog and show snackbar after a short delay
           Future.delayed(const Duration(milliseconds: 500), () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(widget.rootContext).showSnackBar(
-              const SnackBar(content: Text('更新成功！')),
-            );
+            if (mounted) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(widget.rootContext).showSnackBar(
+                const SnackBar(content: Text('更新成功！')),
+              );
+            }
           });
         }
       });
@@ -239,7 +258,9 @@ class _SimulatedUpdateDialogContentState extends State<_SimulatedUpdateDialogCon
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: <Widget>[
             TextButton(
-              child: const Text('以后再说', style: TextStyle(fontSize: 16, color: Colors.blue)), // Changed to blue
+              child: const Text('以后再说',
+                  style: TextStyle(
+                      fontSize: 16, color: Colors.blue)), // Changed to blue
               onPressed: () => Navigator.of(context).pop(),
             ),
             ElevatedButton(
@@ -249,7 +270,8 @@ class _SimulatedUpdateDialogContentState extends State<_SimulatedUpdateDialogCon
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
               ),
               onPressed: _startDownload,
               child: const Text('立即更新', style: TextStyle(fontSize: 16)),
@@ -278,10 +300,12 @@ class _SimulatedUpdateDialogContentState extends State<_SimulatedUpdateDialogCon
           minHeight: 12,
           borderRadius: BorderRadius.circular(6),
           color: Colors.blue, // Changed to blue
-          backgroundColor: Colors.blue.withOpacity(0.2), // Changed to blue
+          backgroundColor:
+              Colors.blue.withAlpha((255 * 0.2).round()), // Changed to blue
         ),
         const SizedBox(height: 10),
-        Text('${(_progress * 100).toStringAsFixed(0)}%', style: TextStyle(color: Colors.blue)), // Changed to blue
+        Text('${(_progress * 100).toStringAsFixed(0)}%',
+            style: TextStyle(color: Colors.blue)), // Changed to blue
         const SizedBox(height: 20),
         const Text(
           '请保持应用在前台，不要锁屏',
@@ -308,17 +332,25 @@ class _SimulatedUpdateDialogContentState extends State<_SimulatedUpdateDialogCon
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('更新日志:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)), // Changed to blue
+            Text('更新日志:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue)), // Changed to blue
             SizedBox(height: 8),
-            Text('  • [新增] 全新的虚拟场景模拟功能，让测试更便捷。', style: TextStyle(color: Colors.blue)), // Changed to blue
+            Text('  • [新增] 全新的虚拟场景模拟功能，让测试更便捷。',
+                style: TextStyle(color: Colors.blue)), // Changed to blue
             SizedBox(height: 4),
-            Text('  • [优化] 对话框的美观度和用户体验，更加贴近原生质感。', style: TextStyle(color: Colors.blue)), // Changed to blue
+            Text('  • [优化] 对话框的美观度和用户体验，更加贴近原生质感。',
+                style: TextStyle(color: Colors.blue)), // Changed to blue
             SizedBox(height: 4),
-            Text('  • [优化] 长日志滚动支持，再多内容也能优雅展示。', style: TextStyle(color: Colors.blue)), // Changed to blue
+            Text('  • [优化] 长日志滚动支持，再多内容也能优雅展示。',
+                style: TextStyle(color: Colors.blue)), // Changed to blue
             SizedBox(height: 4),
-            Text('  • [修复] 若干已知问题，提升应用稳定性与性能。', style: TextStyle(color: Colors.blue)), // Changed to blue
+            Text('  • [修复] 若干已知问题，提升应用稳定性与性能。',
+                style: TextStyle(color: Colors.blue)), // Changed to blue
             SizedBox(height: 4),
-            Text('  • [安全] 更新了核心依赖，增强了安全性。', style: TextStyle(color: Colors.blue)), // Changed to blue
+            Text('  • [安全] 更新了核心依赖，增强了安全性。',
+                style: TextStyle(color: Colors.blue)), // Changed to blue
           ],
         ),
       ),

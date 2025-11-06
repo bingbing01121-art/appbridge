@@ -12,10 +12,13 @@ final Map<String, DownloadTaskInfo> _downloadTasks = {};
 
 @pragma('vm:entry-point')
 void downloadCallback(String id, int status, int progress) {
-  final SendPort? send = IsolateNameServer.lookupPortByName('downloader_send_port');
+  final SendPort? send = IsolateNameServer.lookupPortByName(
+    'downloader_send_port',
+  );
   if (send != null) {
     double speed = 0.0;
-    if (status == 2) { // DownloadTaskStatus.running
+    if (status == 2) {
+      // DownloadTaskStatus.running
       final now = DateTime.now();
       if (_downloadTasks.containsKey(id)) {
         final taskInfo = _downloadTasks[id]!;
@@ -33,6 +36,11 @@ void downloadCallback(String id, int status, int progress) {
       _downloadTasks.remove(id);
     }
 
-    send.send({'id': id, 'status': status, 'progress': progress, 'speed': speed.toStringAsFixed(2) + 'kb/s'});
+    send.send({
+      'id': id,
+      'status': status,
+      'progress': progress,
+      'speed': '${speed.toStringAsFixed(2)}kb/s',
+    });
   }
 }

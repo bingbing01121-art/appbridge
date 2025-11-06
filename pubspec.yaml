@@ -1,7 +1,9 @@
 name: appbridge
-description: "A Flutter plugin providing a bridge for H5 interactions, including core functionalities, navigation, UI controls, storage, permissions, device info, sharing, notifications, authentication, downloads, and app store integrations."
+description:  This is a rich flutter javascript interactive plugin.
 version: 1.0.0
 homepage: https://github.com/bingbing01121-art/appbridge
+repository: https://github.com/bingbing01121-art/appbridge
+issue_tracker: https://github.com/bingbing01121-art/appbridge/issues
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -12,24 +14,25 @@ dependencies:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
   flutter_inappwebview: ^6.0.0
-  device_info_plus: ^9.1.2
-  permission_handler: ^11.3.1
+  device_info_plus: ^12.2.0
+  permission_handler: ^12.0.1
   shared_preferences: ^2.2.2
   dio: ^5.4.0
   path_provider: ^2.1.2
   image_picker: ^1.2.0
   flutter_downloader: ^1.12.0
   url_launcher: ^6.2.2
-  flutter_local_notifications: ^18.0.1
-  share_plus: ^7.2.2
-  battery_plus: ^5.0.2
+  flutter_local_notifications: ^19.0.0
+  share_plus: ^12.0.1
+  battery_plus: ^7.0.0
   package_info_plus: ^9.0.0
-  connectivity_plus: ^5.0.2
+  connectivity_plus: ^7.0.0
   json_annotation: ^4.8.1
   quick_actions: ^1.1.0
   fluttertoast: ^9.0.0
-  pinned_shortcuts: ^0.0.1
-  app_links: ^3.4.1
+  flutter_pinned_shortcut_plus: ^0.0.2
+
+  app_links: ^6.4.1
   get: ^4.6.6
   ffmpeg_kit_flutter_new: ^4.1.0
   flutter_hls_parser: ^2.0.1
@@ -44,8 +47,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  flutter_local_notifications_platform_interface: ^8.0.0
+  flutter_lints: ^6.0.0
+  flutter_local_notifications_platform_interface: ^9.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

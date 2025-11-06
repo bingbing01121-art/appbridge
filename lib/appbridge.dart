@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'appbridge_platform_interface.dart';
 
@@ -58,7 +59,7 @@ class Appbridge {
     return _instance;
   }
   Appbridge._internal() {
-    print('Appbridge: _internal constructor called.');
+    debugPrint('Appbridge: _internal constructor called.');
     _appMethodChannel = const MethodChannel('com.example.appbridge_h5/app');
     _coreModule = CoreModule(_appMethodChannel!);
     _storageModule = StorageModule();
@@ -69,20 +70,22 @@ class Appbridge {
     _downloadModule = DownloadModule(_appMethodChannel!, emitEvent);
 
     _eventsModule = EventsModule(null); // Initialize with null, will be updated
-    _appModule = AppModule(_appMethodChannel!, null); // Context will be updated
+    _appModule = AppModule(_appMethodChannel!); // Context will be updated
     _navModule = NavModule(); // Context will be updated
     _uiModule = UIModule(); // Context will be updated
-    _permissionModule = PermissionModule(null); // Context will be updated
+    _permissionModule = PermissionModule(); // Context will be updated
     _paymentModule = PaymentModule(); // Context will be updated
     _appStoreModule = AppStoreModule(_uiModule); // Context will be updated
-    _deepLinkModule = DeepLinkModule(null, _uiModule); // Context will be updated
-    _testFlightModule = TestFlightModule(null); // Initialize with null, will be updated
-    _videoModule = VideoModule(null); // Context will be updated
-    _novelModule = NovelModule(null); // Context will be updated
-    _comicsModule = ComicsModule(null); // Context will be updated
-    _liveModule = LiveModule(null, emitEvent); // Context will be updated
-    _postModule = PostModule(null); // Context will be updated
-    _liveActivityModule = LiveActivityModule(null); // Initialize with null, will be updated
+    _deepLinkModule = DeepLinkModule(_uiModule); // Context will be updated
+    _testFlightModule =
+        TestFlightModule(_uiModule); // Initialize with null, will be updated
+    _videoModule = VideoModule(); // Context will be updated
+    _novelModule = NovelModule(); // Context will be updated
+    _comicsModule = ComicsModule(); // Context will be updated
+    _liveModule = LiveModule(emitEvent); // Context will be updated
+    _postModule = PostModule(); // Context will be updated
+    _liveActivityModule =
+        LiveActivityModule(_uiModule); // Initialize with null, will be updated
   }
 
   InAppWebViewController? _webViewController;
@@ -96,15 +99,19 @@ class Appbridge {
 
   // Getter for the currently active WebViewController
   InAppWebViewController? get _currentWebViewController =>
-      _activeWebViewControllers.isNotEmpty ? _activeWebViewControllers.last : null;
+      _activeWebViewControllers.isNotEmpty
+          ? _activeWebViewControllers.last
+          : null;
 
   // New: Register a WebViewController when a WebView is created
   void registerWebViewController(InAppWebViewController controller) {
-    print('Appbridge: registerWebViewController called with controller: $controller');
+    debugPrint(
+        'Appbridge: registerWebViewController called with controller: $controller');
     if (!_activeWebViewControllers.contains(controller)) {
       _activeWebViewControllers.add(controller);
       _webViewController = controller; // Also update the main reference
-      print('Appbridge: Registered new WebViewController. Total active: ${_activeWebViewControllers.length}, current: $_webViewController');
+      debugPrint(
+          'Appbridge: Registered new WebViewController. Total active: ${_activeWebViewControllers.length}, current: $_webViewController');
       // New: Update modules that need the webViewController
       _eventsModule?.updateWebViewController(controller);
       // Add JavaScript handler here, as it's the first time this controller is registered
@@ -117,17 +124,20 @@ class Appbridge {
 
   // New: Unregister a WebViewController when a WebView is disposed
   void unregisterWebViewController(InAppWebViewController controller) {
-    print('Appbridge: unregisterWebViewController called with controller: $controller');
+    debugPrint(
+        'Appbridge: unregisterWebViewController called with controller: $controller');
     _activeWebViewControllers.remove(controller);
     if (_callbackStack.isNotEmpty) {
       _callbackStack.removeLast();
     }
     if (_activeWebViewControllers.isNotEmpty) {
-      _webViewController = _activeWebViewControllers.last; // Revert to previous active
+      _webViewController =
+          _activeWebViewControllers.last; // Revert to previous active
     } else {
       _webViewController = null; // No active WebViews
     }
-    print('Appbridge: Unregistered WebViewController. Total active: ${_activeWebViewControllers.length}, current: $_webViewController');
+    debugPrint(
+        'Appbridge: Unregistered WebViewController. Total active: ${_activeWebViewControllers.length}, current: $_webViewController');
   }
 
   MethodChannel? _appMethodChannel;
@@ -161,7 +171,8 @@ class Appbridge {
   NavModule? get nav => _navModule;
 
   Future<BridgeResponse> appIcon({required String styleId}) async {
-    return await _coreModule?.handleMethod('appIcon', {'styleId': styleId}) ?? BridgeResponse.error(-1, 'CoreModule not initialized');
+    return await _coreModule?.handleMethod('appIcon', {'styleId': styleId}) ??
+        BridgeResponse.error(-1, 'CoreModule not initialized');
   }
 
   Future<void> initialize(
@@ -174,11 +185,10 @@ class Appbridge {
     NavReplaceCallback? onNavReplace,
     LoadUrlCallback? onLoadUrl,
   }) async {
-    print('Appbridge: initialize called with webViewController: $webViewController, context: $context');
+    debugPrint(
+        'Appbridge: initialize called with webViewController: $webViewController, context: $context');
     registerWebViewController(webViewController);
-    if (_mainContext == null) {
-      _mainContext = context;
-    }
+    _mainContext ??= context;
 
     // Create and push a new callback handler for the current context
     final callbackHandler = _CallbackHandler(
@@ -192,10 +202,9 @@ class Appbridge {
     );
     _callbackStack.add(callbackHandler);
 
-    print('Appbridge: Context added to stack for: $context');
+    debugPrint('Appbridge: Context added to stack for: $context');
 
     // Modules will now get context from Appbridge().context, so no need to update here.
-    // _appModule?.updateContext(context);
     // _uiModule?.updateContext(context);
     // _permissionModule?.updateContext(context);
     // _deepLinkModule?.updateContext(context);
@@ -214,30 +223,40 @@ class Appbridge {
     // Update callbacks for NavModule to use the top of the stack
     _navModule?.onNavOpen = (url) => _callbackStack.last.onNavOpen?.call(url);
     _navModule?.onNavClose = () => _callbackStack.last.onNavClose?.call();
-    _navModule?.onNavSetTitle = (title) => _callbackStack.last.onNavSetTitle?.call(title);
-    _navModule?.onNavSetBars = (visible) => _callbackStack.last.onNavSetBars?.call(visible);
-    _navModule?.onNavReplace = (url, title) => _callbackStack.last.onNavReplace?.call(url, title);
+    _navModule?.onNavSetTitle =
+        (title) => _callbackStack.last.onNavSetTitle?.call(title);
+    _navModule?.onNavSetBars =
+        (visible) => _callbackStack.last.onNavSetBars?.call(visible);
+    _navModule?.onNavReplace =
+        (url, title) => _callbackStack.last.onNavReplace?.call(url, title);
 
     // Update onLoadUrl for content modules
-    _videoModule?.onLoadUrl = (url, title) => _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
-    _novelModule?.onLoadUrl = (url, title) => _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
-    _comicsModule?.onLoadUrl = (url, title) => _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
-    _postModule?.onLoadUrl = (url, title) => _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
+    _videoModule?.onLoadUrl = (url, title) =>
+        _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
+    _novelModule?.onLoadUrl = (url, title) =>
+        _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
+    _comicsModule?.onLoadUrl = (url, title) =>
+        _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
+    _postModule?.onLoadUrl = (url, title) =>
+        _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
 
     if (_webViewController != null) {
       await _injectJavaScript();
     } else {
-      print('Appbridge: _webViewController is null in initialize, skipping JavaScript injection.');
+      debugPrint(
+          'Appbridge: _webViewController is null in initialize, skipping JavaScript injection.');
     }
 
     _isReady = true;
   }
 
-  BuildContext? get context => _callbackStack.isNotEmpty ? _callbackStack.last.context : null;
+  BuildContext? get context =>
+      _callbackStack.isNotEmpty ? _callbackStack.last.context : null;
   BuildContext? get mainContext => _mainContext;
 
   Future<void> _injectJavaScript() async {
-    print('Appbridge: _injectJavaScript called. Attempting to inject JavaScript.');
+    debugPrint(
+        'Appbridge: _injectJavaScript called. Attempting to inject JavaScript.');
     const jsCode = '''
       window.AppBridge = {
         core: {
@@ -433,14 +452,15 @@ class Appbridge {
       });
     ''';
     await _webViewController!.evaluateJavascript(source: jsCode);
-    print('Appbridge: JavaScript injection complete.');
+    debugPrint('Appbridge: JavaScript injection complete.');
   }
 
   Future<void> _handleMessage(List<dynamic> args) async {
-    print('Appbridge: _handleMessage called with args: $args');
+    debugPrint('Appbridge: _handleMessage called with args: $args');
     final controller = _currentWebViewController; // Get current controller
     if (controller == null) {
-      print('Appbridge: No active WebViewController, cannot handle message.');
+      debugPrint(
+          'Appbridge: No active WebViewController, cannot handle message.');
       return;
     }
     try {
@@ -454,9 +474,10 @@ class Appbridge {
       } catch (e) {
         response = BridgeResponse.error(-1, e.toString());
       }
-      await _sendResponse(messageId, response); // _sendResponse already uses _currentWebViewController
+      await _sendResponse(messageId,
+          response); // _sendResponse already uses _currentWebViewController
     } catch (e) {
-      print('Error handling message: $e');
+      debugPrint('Error handling message: $e');
     }
   }
 
@@ -469,62 +490,90 @@ class Appbridge {
     final action = parts.length > 1 ? parts[1] : '';
     switch (module) {
       case 'core':
-        return await _coreModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'CoreModule not initialized');
+        return await _coreModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'CoreModule not initialized');
       case 'events':
-        return await _eventsModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'EventsModule not initialized');
+        return await _eventsModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'EventsModule not initialized');
       case 'app':
-        return await _appModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'AppModule not initialized');
+        return await _appModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'AppModule not initialized');
       case 'nav':
-        return await _navModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'NavModule not initialized');
+        return await _navModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'NavModule not initialized');
       case 'ui':
-        return await _uiModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'UIModule not initialized');
+        return await _uiModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'UIModule not initialized');
       case 'storage':
-        return await _storageModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'StorageModule not initialized');
+        return await _storageModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'StorageModule not initialized');
       case 'permission':
-        return await _permissionModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'PermissionModule not initialized');
+        return await _permissionModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'PermissionModule not initialized');
       case 'device':
-        return await _deviceModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'DeviceModule not initialized');
+        return await _deviceModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'DeviceModule not initialized');
       case 'share':
-        return await _shareModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'ShareModule not initialized');
+        return await _shareModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'ShareModule not initialized');
       case 'clipboard':
-        return await _shareModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'ShareModule not initialized');
+        return await _shareModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'ShareModule not initialized');
       case 'notifications':
-        return await _notificationsModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'NotificationsModule not initialized');
+        return await _notificationsModule?.handleMethod(
+                action, params, context) ??
+            BridgeResponse.error(-1, 'NotificationsModule not initialized');
       case 'auth':
-        return await _authModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'AuthModule not initialized');
+        return await _authModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'AuthModule not initialized');
       case 'payment':
-        return await _paymentModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'PaymentModule not initialized');
+        return await _paymentModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'PaymentModule not initialized');
       case 'download':
-        return await _downloadModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'DownloadModule not initialized');
+        return await _downloadModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'DownloadModule not initialized');
       case 'apk':
-        return await _downloadModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'DownloadModule not initialized');
+        return await _downloadModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'DownloadModule not initialized');
       case 'cache':
-        return await _downloadModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'DownloadModule not initialized');
+        return await _downloadModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'DownloadModule not initialized');
       case 'appstore':
-        return await _appStoreModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'AppStoreModule not initialized');
+        return await _appStoreModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'AppStoreModule not initialized');
       case 'deeplink':
-        return await _deepLinkModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'DeepLinkModule not initialized');
+        return await _deepLinkModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'DeepLinkModule not initialized');
       case 'liveActivity':
-        return await _liveActivityModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'LiveActivityModule not initialized');
+        return await _liveActivityModule?.handleMethod(
+                action, params, context) ??
+            BridgeResponse.error(-1, 'LiveActivityModule not initialized');
       case 'testflight':
-        return await _testFlightModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'TestFlightModule not initialized');
+        return await _testFlightModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'TestFlightModule not initialized');
       case 'video':
-        return await _videoModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'VideoModule not initialized');
+        return await _videoModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'VideoModule not initialized');
       case 'novel':
-        return await _novelModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'NovelModule not initialized');
+        return await _novelModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'NovelModule not initialized');
       case 'comics':
-        return await _comicsModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'ComicsModule not initialized');
+        return await _comicsModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'ComicsModule not initialized');
       case 'live':
-        return await _liveModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'LiveModule not initialized');
+        return await _liveModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'LiveModule not initialized');
       case 'post':
-        return await _postModule?.handleMethod(action, params) ?? BridgeResponse.error(-1, 'PostModule not initialized');
+        return await _postModule?.handleMethod(action, params, context) ??
+            BridgeResponse.error(-1, 'PostModule not initialized');
       default:
         return BridgeResponse.error(-1, 'Unknown module: $module');
     }
   }
 
   Future<void> _sendResponse(String messageId, BridgeResponse response) async {
-    print('Appbridge: _sendResponse called for messageId: $messageId, response: ${response.toJson()}');
+    debugPrint(
+        'Appbridge: _sendResponse called for messageId: $messageId, response: ${response.toJson()}');
     final responseData = {
       'type': 'bridge_response',
       'messageId': messageId,
@@ -532,12 +581,13 @@ class Appbridge {
     };
     final controller = _currentWebViewController;
     if (controller == null) {
-      print('Appbridge: No active WebViewController, cannot send response for messageId: $messageId');
+      debugPrint(
+          'Appbridge: No active WebViewController, cannot send response for messageId: $messageId');
       return;
     }
-    await controller.evaluateJavascript( // Use controller
-      source:
-          '''
+    await controller.evaluateJavascript(
+      // Use controller
+      source: '''
       window.dispatchEvent(new MessageEvent('message', {
         data: ${jsonEncode(responseData)}
       }));
@@ -546,10 +596,12 @@ class Appbridge {
   }
 
   Future<void> emitEvent(String event, dynamic payload) async {
-    print('Appbridge: emitEvent called for event: $event, payload: $payload');
+    debugPrint(
+        'Appbridge: emitEvent called for event: $event, payload: $payload');
     final controller = _currentWebViewController;
     if (controller == null) {
-      print('Appbridge: No active WebViewController, cannot emit event: $event');
+      debugPrint(
+          'Appbridge: No active WebViewController, cannot emit event: $event');
       return;
     }
     try {
@@ -558,13 +610,12 @@ class Appbridge {
         'event': event,
         'payload': payload,
       };
-      final jsCode =
-          '''
+      final jsCode = '''
         window.dispatchEvent(new CustomEvent('${eventData['event']}', { detail: ${jsonEncode(eventData['payload'])} }));
       ''';
       await controller.evaluateJavascript(source: jsCode); // Use controller
     } catch (e) {
-      print('Error emitting event to webview: $e');
+      debugPrint('Error emitting event to webview: $e');
     }
   }
 
@@ -581,7 +632,7 @@ class Appbridge {
   // New: Method to clear the context
   void clearContext() {
     // _context = null; // Removed as _context field no longer exists
-    print('Appbridge: Context cleared.');
+    debugPrint('Appbridge: Context cleared.');
   }
 
   Future<BridgeResponse> callModuleMethod(

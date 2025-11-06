@@ -9,7 +9,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 class MockAppbridgePlatform
     with MockPlatformInterfaceMixin
     implements AppbridgePlatform {
-
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
 }
@@ -24,7 +23,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   // Mock FlutterLocalNotificationsPlatform
-  FlutterLocalNotificationsPlatform.instance = MockFlutterLocalNotificationsPlatform();
+  FlutterLocalNotificationsPlatform.instance =
+      MockFlutterLocalNotificationsPlatform();
 
   final AppbridgePlatform initialPlatform = AppbridgePlatform.instance;
 

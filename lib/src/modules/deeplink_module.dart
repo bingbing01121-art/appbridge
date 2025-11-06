@@ -7,21 +7,16 @@ import 'base_module.dart';
 import 'ui_module.dart'; // Import UIModule
 
 class DeepLinkModule extends BaseModule {
-  BuildContext? _context;
   UIModule? _uiModule; // Make nullable and non-final
   late AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
 
-  DeepLinkModule(this._context, this._uiModule) {
+  DeepLinkModule(this._uiModule) {
     _appLinks = AppLinks();
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
       // Handle incoming deep links
       _uiModule?.toast(message: 'Received deep link: $uri');
     });
-  }
-
-  void updateContext(BuildContext? context) {
-    _context = context;
   }
 
   void updateUIModule(UIModule uiModule) {
@@ -30,15 +25,9 @@ class DeepLinkModule extends BaseModule {
 
   @override
   Future<BridgeResponse> handleMethod(
-    String action,
-    Map<String, dynamic> params,
-  ) async {
-    print(
-      "AAAAAA--DeepLinkModule-action==" +
-          action +
-          ";params==" +
-          params.toString(),
-    );
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
+    debugPrint("DeepLinkModule-action==$action;params==$params");
     switch (action) {
       case 'open':
         return await _open(params);
@@ -80,7 +69,7 @@ class DeepLinkModule extends BaseModule {
       );
       return BridgeResponse.success({'parsedLink': result1});
     }
-    final uri = await _appLinks.getLatestAppLink();
+    final uri = await _appLinks.getInitialLink();
     if (uri != null) {
       return BridgeResponse.success({'parsedLink': urlString});
     } else {

@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
 import 'base_module.dart';
 import '../models/bridge_response.dart';
 import '../models/device_info.dart';
@@ -14,7 +16,9 @@ class DeviceModule extends BaseModule {
   DeviceModule(this._platform);
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'getIds':
         return await _getIds();
@@ -37,7 +41,7 @@ class DeviceModule extends BaseModule {
     try {
       final deviceInfo = DeviceInfoPlugin();
       String deviceId = 'unknown';
-      
+
       if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
         deviceId = androidInfo.id;
@@ -45,12 +49,12 @@ class DeviceModule extends BaseModule {
         final iosInfo = await deviceInfo.iosInfo;
         deviceId = iosInfo.identifierForVendor ?? 'unknown';
       }
-      
+
       final ids = {
         'deviceId': deviceId,
         'installationId': deviceId, // 简化实现
       };
-      
+
       return BridgeResponse.success(ids);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
@@ -61,7 +65,7 @@ class DeviceModule extends BaseModule {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final deviceInfo = DeviceInfoPlugin();
-      
+
       String platform = 'Unknown';
       String systemType = 'Unknown';
       String osVersion = 'Unknown';
@@ -85,12 +89,12 @@ class DeviceModule extends BaseModule {
         brand = androidInfo.brand;
         model = androidInfo.model;
         sdkInt = androidInfo.version.sdkInt;
-        screenWidth = androidInfo.displayMetrics.widthPx.toInt();
-        screenHeight = androidInfo.displayMetrics.heightPx.toInt();
-        pixelRatio = 1.0; // 简化实现
-        dpi = 160; // 简化实现
-        physicalWidth = androidInfo.displayMetrics.widthPx.toInt();
-        physicalHeight = androidInfo.displayMetrics.heightPx.toInt();
+        screenWidth = 0; // Not directly available from AndroidDeviceInfo
+        screenHeight = 0; // Not directly available from AndroidDeviceInfo
+        pixelRatio = 1.0; // Default value
+        dpi = 160; // Default value
+        physicalWidth = 0; // Not directly available from AndroidDeviceInfo
+        physicalHeight = 0; // Not directly available from AndroidDeviceInfo
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
         platform = 'iOS';
@@ -141,13 +145,13 @@ class DeviceModule extends BaseModule {
       final battery = Battery();
       final batteryLevel = await battery.batteryLevel;
       final batteryState = await battery.batteryState;
-      
+
       final batteryInfo = {
         'level': batteryLevel / 100.0,
         'charging': batteryState == BatteryState.charging,
         'powerSave': false, // 简化实现
       };
-      
+
       return BridgeResponse.success(batteryInfo);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
@@ -156,43 +160,45 @@ class DeviceModule extends BaseModule {
 
   Future<BridgeResponse> _getStorageInfo() async {
     try {
-      final Map<dynamic, dynamic> result = await _platform.invokeMethod('getStorageInfo');
+      final Map<dynamic, dynamic> result =
+          await _platform.invokeMethod('getStorageInfo');
       final totalStorage = result['totalStorage'] as int;
       final availableStorage = result['availableStorage'] as int;
-      final usedStorage = result['usedStorage'] as int;
 
       final storageInfo = {
         'total': (totalStorage / (1024 * 1024)).round(), // Convert to MB
         'free': (availableStorage / (1024 * 1024)).round(), // Convert to MB
         'unit': 'MB',
       };
-      
+
       return BridgeResponse.success(storageInfo);
     } on PlatformException catch (e) {
-      return BridgeResponse.error(-1, "Failed to get storage info: '${e.message}'.");
+      return BridgeResponse.error(
+          -1, "Failed to get storage info: '${e.message}'.");
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
   }
 
   Future<BridgeResponse> _getMemoryInfo() async {
-    print("获取内存信息---_getMemoryInfo()----");
     try {
-      final Map<dynamic, dynamic> result = await _platform.invokeMethod('getMemoryInfo');
+      final Map<dynamic, dynamic> result =
+          await _platform.invokeMethod('getMemoryInfo');
       final totalMemory = result['totalMemory'] as int;
       final availableMemory = result['availableMemory'] as int;
-      final usedMemory = result['usedMemory'] as int;
 
       final memoryInfo = {
         'total': (totalMemory / (1024 * 1024)).round(), // Convert to MB
         'free': (availableMemory / (1024 * 1024)).round(), // Convert to MB
-        'lowMemory': false, // Native Android doesn't directly provide this in MemoryInfo
+        'lowMemory':
+            false, // Native Android doesn't directly provide this in MemoryInfo
         'unit': 'MB',
       };
-      
+
       return BridgeResponse.success(memoryInfo);
     } on PlatformException catch (e) {
-      return BridgeResponse.error(-1, "Failed to get memory info: '${e.message}'.");
+      return BridgeResponse.error(
+          -1, "Failed to get memory info: '${e.message}'.");
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
@@ -200,7 +206,8 @@ class DeviceModule extends BaseModule {
 
   Future<BridgeResponse> _getCpuInfo() async {
     try {
-      final Map<dynamic, dynamic> result = await _platform.invokeMethod('getCpuInfo');
+      final Map<dynamic, dynamic> result =
+          await _platform.invokeMethod('getCpuInfo');
       final cores = result['cores'] as int;
       final arch = result['arch'] as String;
       final frequency = result['frequency'] as String;
@@ -210,10 +217,11 @@ class DeviceModule extends BaseModule {
         'arch': arch,
         'frequency': frequency,
       };
-      
+
       return BridgeResponse.success(cpuInfo);
     } on PlatformException catch (e) {
-      return BridgeResponse.error(-1, "Failed to get CPU info: '${e.message}'.");
+      return BridgeResponse.error(
+          -1, "Failed to get CPU info: '${e.message}'.");
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }

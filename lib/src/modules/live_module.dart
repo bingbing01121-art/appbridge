@@ -1,21 +1,18 @@
+import 'package:flutter/material.dart';
 import 'base_module.dart';
 import '../models/bridge_response.dart';
-import 'package:flutter/material.dart';
 
 typedef EventEmitter = Future<void> Function(String event, dynamic payload);
 
 class LiveModule extends BaseModule {
-  BuildContext? _context;
   final EventEmitter eventEmitter;
 
-  LiveModule(this._context, this.eventEmitter);
-
-  void updateContext(BuildContext? context) {
-    _context = context;
-  }
+  LiveModule(this.eventEmitter);
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'start':
         return await _startLive(params);
@@ -39,9 +36,11 @@ class LiveModule extends BaseModule {
     }
     // Emit a ready event after a short delay
     Future.delayed(Duration(seconds: 1), () {
-      eventEmitter('live.ready', {'id': id, 'message': 'Live stream started and ready.'});
+      eventEmitter('live.ready',
+          {'id': id, 'message': 'Live stream started and ready.'});
     });
-    return BridgeResponse.success({'message': 'Live stream start initiated for ID: $id'});
+    return BridgeResponse.success(
+        {'message': 'Live stream start initiated for ID: $id'});
   }
 
   Future<BridgeResponse> _stopLive(Map<String, dynamic> params) async {
@@ -50,7 +49,8 @@ class LiveModule extends BaseModule {
     if (id == null) {
       return BridgeResponse.error(-1, 'Live stream ID is required.');
     }
-    return BridgeResponse.success({'message': 'Live stream stopped for ID: $id'});
+    return BridgeResponse.success(
+        {'message': 'Live stream stopped for ID: $id'});
   }
 
   Future<BridgeResponse> _playLive(Map<String, dynamic> params) async {
@@ -59,7 +59,8 @@ class LiveModule extends BaseModule {
     if (id == null) {
       return BridgeResponse.error(-1, 'Live stream ID is required.');
     }
-    return BridgeResponse.success({'message': 'Live stream playing for ID: $id'});
+    return BridgeResponse.success(
+        {'message': 'Live stream playing for ID: $id'});
   }
 
   Future<BridgeResponse> _pauseLive(Map<String, dynamic> params) async {
@@ -68,6 +69,7 @@ class LiveModule extends BaseModule {
     if (id == null) {
       return BridgeResponse.error(-1, 'Live stream ID is required.');
     }
-    return BridgeResponse.success({'message': 'Live stream paused for ID: $id'});
+    return BridgeResponse.success(
+        {'message': 'Live stream paused for ID: $id'});
   }
 }

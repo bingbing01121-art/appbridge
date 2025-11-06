@@ -6,16 +6,12 @@ import '../models/bridge_response.dart';
 
 /// Permission模块实现
 class PermissionModule extends BaseModule {
-  BuildContext? _context;
-
-  PermissionModule(this._context);
-
-  void updateContext(BuildContext? context) {
-    _context = context;
-  }
+  PermissionModule();
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'check':
         return await _check(params);
@@ -48,10 +44,10 @@ class PermissionModule extends BaseModule {
       if (name == null) {
         return BridgeResponse.error(-1, 'Permission name is required');
       }
-      
+
       final permission = _getPermission(name);
       final status = await permission.request();
-      
+
       return BridgeResponse.success(status.isGranted);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
@@ -59,16 +55,14 @@ class PermissionModule extends BaseModule {
   }
 
   Future<BridgeResponse> _ensure(Map<String, dynamic> params) async {
-
     try {
       final name = params['name'] as String?;
       if (name == null) {
         return BridgeResponse.error(-1, 'Permission name is required');
       }
-      
+
       final permission = _getPermission(name);
       PermissionStatus status = await permission.status;
-      print("AAAAAname==="+name);
       if (name == 'notifications') {
         if (status.isGranted) {
           // NotificationsModule will handle showing the notification
@@ -76,7 +70,8 @@ class PermissionModule extends BaseModule {
         } else if (status.isDenied || status.isPermanentlyDenied) {
           openAppSettings(); // Open app settings for user to grant permission
           return BridgeResponse.success(false);
-        } else { // isUndetermined
+        } else {
+          // isUndetermined
           status = await permission.request();
           if (status.isGranted) {
             // NotificationsModule will handle showing the notification
@@ -92,9 +87,10 @@ class PermissionModule extends BaseModule {
         }
         if (status.isGranted) {
           final ImagePicker picker = ImagePicker();
-          final XFile? image = await picker.pickImage(source: ImageSource.camera);
+          final XFile? image =
+              await picker.pickImage(source: ImageSource.camera);
           if (image != null) {
-            print('Picked image path: ${image.path}');
+            debugPrint('Picked image path: ${image.path}');
             return BridgeResponse.success({'path': image.path});
           } else {
             return BridgeResponse.success({'path': null, 'cancelled': true});

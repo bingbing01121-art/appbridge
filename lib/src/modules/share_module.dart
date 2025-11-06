@@ -8,7 +8,9 @@ import '../models/bridge_response.dart';
 /// Share模块实现
 class ShareModule extends BaseModule {
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'open':
         return await _open(params);
@@ -27,15 +29,13 @@ class ShareModule extends BaseModule {
     try {
       final text = params['text'] as String? ?? '';
       final url = params['url'] as String? ?? '';
-      final image = params['image'] as String?;
-      final platforms = params['platforms'] as List<dynamic>?;
-      
+
       String shareText = text;
       if (url.isNotEmpty) {
         shareText = shareText.isEmpty ? url : '$shareText\n$url';
       }
-      
-      await Share.share(shareText);
+
+      await SharePlus.instance.share(ShareParams(text: shareText));
       return BridgeResponse.success(true);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
@@ -55,8 +55,12 @@ class ShareModule extends BaseModule {
   Future<BridgeResponse> _getClipboard() async {
     try {
       final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-      Fluttertoast.showToast(msg: clipboardData!.text.toString());
-      return BridgeResponse.success(clipboardData?.text ?? '');
+      if (clipboardData != null) {
+        Fluttertoast.showToast(msg: clipboardData.text.toString());
+        return BridgeResponse.success(clipboardData.text ?? '');
+      } else {
+        return BridgeResponse.success('');
+      }
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }

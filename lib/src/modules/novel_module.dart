@@ -1,22 +1,18 @@
-import '../../appbridge.dart';
+import 'package:flutter/material.dart';
 import 'base_module.dart';
 import '../models/bridge_response.dart';
-import 'package:flutter/material.dart';
 
 typedef LoadUrlCallback = Future<void> Function(String url, String? title);
 
 class NovelModule extends BaseModule {
-  BuildContext? _context;
   LoadUrlCallback? onLoadUrl;
 
-  NovelModule(this._context, {this.onLoadUrl});
-
-  void updateContext(BuildContext? context) {
-    _context = context;
-  }
+  NovelModule({this.onLoadUrl});
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'open':
         return await _openNovel(params);
@@ -32,7 +28,8 @@ class NovelModule extends BaseModule {
     final title = params['title'] as String?;
 
     if (id == null && url == null) {
-      return BridgeResponse.error(-1, 'Either id or url is required to open novel.');
+      return BridgeResponse.error(
+          -1, 'Either id or url is required to open novel.');
     }
 
     if (url != null && url.isNotEmpty) {

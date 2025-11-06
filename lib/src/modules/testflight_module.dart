@@ -15,10 +15,15 @@ class TestFlightModule extends BaseModule {
   }
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     if (Platform.isAndroid) {
-      _uiModule?.toast(message: 'text'+ 'TestFlight functionality is only available on iOS.'); // Show toast
-      return BridgeResponse.error(-1, 'TestFlight functionality is only available on iOS.');
+      _uiModule?.toast(
+          message:
+              'textTestFlight functionality is only available on iOS.'); // Show toast
+      return BridgeResponse.error(
+          -1, 'TestFlight functionality is only available on iOS.');
     }
     switch (action) {
       case 'open':
@@ -31,7 +36,8 @@ class TestFlightModule extends BaseModule {
   Future<BridgeResponse> _open(Map<String, dynamic> params) async {
     final urlString = params['url'] as String?;
     if (urlString == null) {
-      _uiModule?.toast(message:'text'+ 'URL is required for TestFlight open.'); // Add toast
+      _uiModule?.toast(
+          message: 'textURL is required for TestFlight open.'); // Add toast
       return BridgeResponse.error(-1, 'url is required');
     }
 
@@ -40,7 +46,8 @@ class TestFlightModule extends BaseModule {
       await launchUrl(url);
       return BridgeResponse.success(null);
     } else {
-      _uiModule?.toast(message: 'text'+ 'Could not launch $urlString.'); // Add toast
+      _uiModule?.toast(
+          message: 'textCould not launch $urlString.'); // Add toast
       return BridgeResponse.error(-1, 'Could not launch $url');
     }
   }

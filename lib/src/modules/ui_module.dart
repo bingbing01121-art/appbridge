@@ -12,13 +12,10 @@ class UIModule extends BaseModule {
 
   UIModule();
 
-
-
   @override
   Future<BridgeResponse> handleMethod(
-    String action,
-    Map<String, dynamic> params,
-  ) async {
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'toast':
         return await _toast(params);
@@ -62,7 +59,7 @@ class UIModule extends BaseModule {
         fontSize: 16.0,
       );
     } catch (e) {
-      print('Error showing toast: $e');
+      debugPrint('Error showing toast: $e');
     }
   }
 
@@ -74,10 +71,12 @@ class UIModule extends BaseModule {
 
       final currentContext = Appbridge().context;
       if (currentContext == null) {
-        return BridgeResponse.error(-1, 'No valid BuildContext available for UI operations.');
+        return BridgeResponse.error(
+            -1, 'No valid BuildContext available for UI operations.');
       }
 
-      await showDialog<void>( // Added showDialog call
+      await showDialog<void>(
+        // Added showDialog call
         context: currentContext,
         builder: (BuildContext context) {
           return AlertDialog(
@@ -109,7 +108,8 @@ class UIModule extends BaseModule {
 
       final currentContext = Appbridge().context;
       if (currentContext == null) {
-        return BridgeResponse.error(-1, 'No valid BuildContext available for UI operations.');
+        return BridgeResponse.error(
+            -1, 'No valid BuildContext available for UI operations.');
       }
 
       final bool? result = await showDialog<bool>(
@@ -148,7 +148,8 @@ class UIModule extends BaseModule {
 
       final currentContext = Appbridge().context;
       if (currentContext == null) {
-        return BridgeResponse.error(-1, 'No valid BuildContext available for UI operations.');
+        return BridgeResponse.error(
+            -1, 'No valid BuildContext available for UI operations.');
       }
 
       final String? selectedId = await showModalBottomSheet<String>(
@@ -208,7 +209,7 @@ class UIModule extends BaseModule {
               // Darken background with a subtle blur effect (if possible, otherwise just darken)
               ModalBarrier(
                 dismissible: true, // Allow dismissing by tapping outside
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withAlpha((255 * 0.5).round()),
                 onDismiss: () {
                   _loadingOverlayEntry?.remove();
                   _loadingOverlayEntry = null;
@@ -221,13 +222,13 @@ class UIModule extends BaseModule {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withAlpha((255 * 0.9).round()),
                       // Slightly transparent white background
                       borderRadius: BorderRadius.circular(12),
                       // Slightly larger border radius
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withAlpha((255 * 0.1).round()),
                           blurRadius: 10,
                           spreadRadius: 2,
                         ),
@@ -258,9 +259,11 @@ class UIModule extends BaseModule {
         );
         final currentContext = Appbridge().context;
         if (currentContext == null) {
-          return BridgeResponse.error(-1, 'No valid BuildContext available for UI operations.');
+          return BridgeResponse.error(
+              -1, 'No valid BuildContext available for UI operations.');
         }
-        Overlay.of(currentContext).insert(_loadingOverlayEntry!); // Use currentContext here
+        Overlay.of(currentContext)
+            .insert(_loadingOverlayEntry!); // Use currentContext here
 
         // Return a function to dismiss the loading indicator
         return BridgeResponse.success(() {
@@ -280,7 +283,7 @@ class UIModule extends BaseModule {
   Future<BridgeResponse> _haptics(Map<String, dynamic> params) async {
     try {
       final style = params['style'] as String? ?? 'light';
-      print("AAA震动样式style==" + style);
+      debugPrint("AAA震动样式style==$style");
       switch (style) {
         case 'light':
           HapticFeedback.lightImpact();

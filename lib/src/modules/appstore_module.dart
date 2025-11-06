@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../models/bridge_response.dart';
 import 'base_module.dart';
 import 'ui_module.dart'; // Import UIModule
@@ -16,11 +16,15 @@ class AppStoreModule extends BaseModule {
   }
 
   @override
-  Future<BridgeResponse> handleMethod(String action, Map<String, dynamic> params) async {
-    print("AAAAAhandleMethod===action="+action+";params="+params.toString());
+  Future<BridgeResponse> handleMethod(
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     if (Platform.isAndroid) {
-      _uiModule?.toast(message: 'AppStore functionality is only available on iOS.'); // Show toast
-      return BridgeResponse.error(-1, 'AppStore functionality is only available on iOS.');
+      _uiModule?.toast(
+          message:
+              'AppStore functionality is only available on iOS.'); // Show toast
+      return BridgeResponse.error(
+          -1, 'AppStore functionality is only available on iOS.');
     }
     switch (action) {
       case 'open':

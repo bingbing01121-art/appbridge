@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -5,7 +6,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:pinned_shortcuts/pinned_shortcuts.dart';
+
+import 'package:flutter_pinned_shortcut_plus/flutter_pinned_shortcut_plus.dart';
 
 import '../models/bridge_response.dart';
 import '../models/environment_info.dart';
@@ -21,9 +23,8 @@ class CoreModule extends BaseModule {
 
   @override
   Future<BridgeResponse> handleMethod(
-    String action,
-    Map<String, dynamic> params,
-  ) async {
+      String action, Map<String, dynamic> params,
+      [BuildContext? context]) async {
     switch (action) {
       case 'getVersion':
         return await _getVersion();
@@ -122,28 +123,20 @@ class CoreModule extends BaseModule {
       final connectivityResult = await connectivity.checkConnectivity();
 
       String networkType = 'none';
-      switch (connectivityResult) {
-        case ConnectivityResult.wifi:
-          networkType = 'wifi';
-          break;
-        case ConnectivityResult.mobile:
-          networkType = '4g';
-          break;
-        case ConnectivityResult.ethernet:
-          networkType = 'wifi';
-          break;
-        case ConnectivityResult.bluetooth:
-          networkType = 'bluetooth';
-          break;
-        case ConnectivityResult.vpn:
-          networkType = 'vpn';
-          break;
-        case ConnectivityResult.other:
-          networkType = 'other';
-          break;
-        case ConnectivityResult.none:
-          networkType = 'none';
-          break;
+      if (connectivityResult.contains(ConnectivityResult.wifi)) {
+        networkType = 'wifi';
+      } else if (connectivityResult.contains(ConnectivityResult.mobile)) {
+        networkType = '4g';
+      } else if (connectivityResult.contains(ConnectivityResult.ethernet)) {
+        networkType = 'wifi'; // Ethernet can be considered similar to wifi for network type
+      } else if (connectivityResult.contains(ConnectivityResult.bluetooth)) {
+        networkType = 'bluetooth';
+      } else if (connectivityResult.contains(ConnectivityResult.vpn)) {
+        networkType = 'vpn';
+      } else if (connectivityResult.contains(ConnectivityResult.other)) {
+        networkType = 'other';
+      } else if (connectivityResult.contains(ConnectivityResult.none)) {
+        networkType = 'none';
       }
 
       final envInfo = EnvironmentInfo(
@@ -164,7 +157,7 @@ class CoreModule extends BaseModule {
         vpnEnabled: false,
         networkRestricted: false,
       );
-      print("CoreModule获取环境信息返回==${envInfo.toJson()}");
+      debugPrint("CoreModule获取环境信息返回==${envInfo.toJson()}");
       return BridgeResponse.success(envInfo.toJson());
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
@@ -204,7 +197,7 @@ class CoreModule extends BaseModule {
 
   /// 获取可用方法列表
   Future<BridgeResponse> _getCapabilities() async {
-    print("_getCapabilities--进入方法列表");
+    debugPrint("_getCapabilities--进入方法列表");
     final capabilities = [
       'core.getVersion',
       'core.getEnv',
@@ -276,27 +269,24 @@ class CoreModule extends BaseModule {
 
   /// 添加桌面快捷方式 (Android only)
   Future<BridgeResponse> _addPinnedShortcut(Map<String, dynamic> params) async {
-    print("AAAA---添加桌面快捷方式 (Android)");
     try {
       final title = params['title'] as String? ?? 'Shortcut';
       final url = params['url'] as String? ?? '';
-      print("AAAA---添加桌面快捷方式 titlel==" + title);
-      print("AAAA---添加桌面快捷方式 url==" + url);
 
       if (url.isEmpty) {
         return BridgeResponse.error(-1, 'URL is required for a shortcut');
       }
 
-      await FlutterPinnedShortcuts.createPinnedShortcut(
+      await FlutterPinnedShortcut().createPinnedShortcut(
         id: url,
         label: title,
-        imageSource: 'icon_h5sdk_new', // Placeholder icon
-        imageSourceType: ImageSourceType.resource,
+        action: url, // Add action parameter
+        iconAssetName: 'assets/icon_h5sdk_new.png', // Placeholder icon
       );
 
       return BridgeResponse.success(true);
     } catch (e) {
-      print(e);
+      debugPrint(e.toString());
       return BridgeResponse.error(
         -1,
         'Failed to add pinned shortcut: ${e.toString()}',
@@ -306,13 +296,10 @@ class CoreModule extends BaseModule {
 
   /// 添加应用内快捷方式 (iOS)
   Future<BridgeResponse> _addQuickAction(Map<String, dynamic> params) async {
-    print("AAAA---添加快捷方式 (iOS)");
     try {
       const quickActions = QuickActions();
       final title = params['title'] as String? ?? 'Shortcut';
       final url = params['url'] as String? ?? '';
-      print("AAAA---添加快捷方式titlel==" + title);
-      print("AAAA---添加快捷方式url==" + url);
 
       if (url.isEmpty) {
         return BridgeResponse.error(-1, 'URL is required for a shortcut');
@@ -321,14 +308,14 @@ class CoreModule extends BaseModule {
       await quickActions.setShortcutItems([
         ShortcutItem(
           type: url, // Use the URL as the unique identifier
-          localizedTitle: title + "快捷方式",
+          localizedTitle: '$title快捷方式',
           icon: 'ic_launcher', // Placeholder icon, user needs to add a real one
         ),
       ]);
 
       return BridgeResponse.success(true);
     } catch (e) {
-      print(e);
+      debugPrint(e.toString());
       return BridgeResponse.error(
         -1,
         'Failed to add shortcut: ${e.toString()}',
@@ -336,10 +323,9 @@ class CoreModule extends BaseModule {
     }
   }
 
-
   /// 切换应用图标
   Future<BridgeResponse> _appIcon(Map<String, dynamic> params) async {
-    print("AAAAAA切换应用图标--_appIcon");
+    debugPrint("AAAAAA切换应用图标--_appIcon");
     try {
       final styleId = params['styleId'] as String?;
       if (styleId == null) {
@@ -357,7 +343,8 @@ class CoreModule extends BaseModule {
         // If e.code is not a valid integer, use -1
         errorCode = -1;
       }
-      return BridgeResponse.error(errorCode, e.message ?? 'Unknown PlatformException');
+      return BridgeResponse.error(
+          errorCode, e.message ?? 'Unknown PlatformException');
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
