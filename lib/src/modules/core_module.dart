@@ -14,12 +14,24 @@ import '../models/environment_info.dart';
 import '../models/version_info.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'base_module.dart';
+import 'package:appbridge/appbridge.dart'; // Re-add Appbridge import
 
 /// Core模块实现
 class CoreModule extends BaseModule {
   final MethodChannel _platform;
 
+  OnAddShortcutCallback? _onAddShortcut;
+  OnAppIconCallback? _onAppIcon;
+
   CoreModule(this._platform);
+
+  void updateCallbacks({
+    OnAddShortcutCallback? onAddShortcut,
+    OnAppIconCallback? onAppIcon,
+  }) {
+    _onAddShortcut = onAddShortcut;
+    _onAppIcon = onAppIcon;
+  }
 
   @override
   Future<BridgeResponse> handleMethod(
@@ -39,9 +51,18 @@ class CoreModule extends BaseModule {
       case 'setVpn':
         return await _setVpn(params);
       case 'addShortcuts':
-        return await _addShortcuts(params);
+        final title = params['title'] as String? ?? '';
+        final url = params['url'] as String? ?? '';
+        if (_onAddShortcut != null) {
+          return await _onAddShortcut!(title, url);
+        }
+        return BridgeResponse.error(-1, 'onAddShortcut handler not provided by app');
       case 'appIcon':
-        return await _appIcon(params);
+        final styleId = params['styleId'] as String? ?? '';
+        if (_onAppIcon != null) {
+          return await _onAppIcon!(styleId);
+        }
+        return BridgeResponse.error(-1, 'onAppIcon handler not provided by app');
       default:
         return BridgeResponse.error(-1, 'Unknown action: $action');
     }

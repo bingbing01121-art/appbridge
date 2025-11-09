@@ -62,7 +62,10 @@ class PermissionModule extends BaseModule {
       }
 
       final permission = _getPermission(name);
+      debugPrint('PermissionModule: Checking status for $name');
       PermissionStatus status = await permission.status;
+      debugPrint('PermissionModule: Initial status for $name: $status');
+
       if (name == 'notifications') {
         if (status.isGranted) {
           // NotificationsModule will handle showing the notification
@@ -83,28 +86,42 @@ class PermissionModule extends BaseModule {
         }
       } else if (name == 'camera') {
         if (!status.isGranted) {
+          debugPrint('PermissionModule: Camera not granted, requesting...');
           status = await permission.request();
+          debugPrint('PermissionModule: Status after request for camera: $status');
         }
         if (status.isGranted) {
-          final ImagePicker picker = ImagePicker();
-          final XFile? image =
-              await picker.pickImage(source: ImageSource.camera);
-          if (image != null) {
-            debugPrint('Picked image path: ${image.path}');
-            return BridgeResponse.success({'path': image.path});
-          } else {
-            return BridgeResponse.success({'path': null, 'cancelled': true});
+          debugPrint('PermissionModule: Camera granted, attempting to pick image...');
+          try {
+            final ImagePicker picker = ImagePicker();
+            final XFile? image =
+                await picker.pickImage(source: ImageSource.camera);
+            if (image != null) {
+              debugPrint('PermissionModule: Picked image path: ${image.path}');
+              return BridgeResponse.success({'path': image.path});
+            } else {
+              debugPrint('PermissionModule: Image picking cancelled or failed.');
+              return BridgeResponse.success({'path': null, 'cancelled': true});
+            }
+          } catch (e) {
+            debugPrint('PermissionModule: Error picking image: $e');
+            return BridgeResponse.error(-1, 'Error picking image: $e');
           }
         } else {
+          debugPrint('PermissionModule: Camera permission not granted after request. Opening app settings.');
+          await openAppSettings(); // Open app settings if permission is not granted
           return BridgeResponse.success(false);
         }
       } else {
         if (!status.isGranted) {
+          debugPrint('PermissionModule: Other permission not granted, requesting...');
           status = await permission.request();
+          debugPrint('PermissionModule: Status after request for other permission: $status');
         }
         return BridgeResponse.success(status.isGranted);
       }
     } catch (e) {
+      debugPrint('PermissionModule: Top-level error in _ensure: $e');
       return BridgeResponse.error(-1, e.toString());
     }
   }

@@ -23,6 +23,31 @@ public class AppbridgePlugin: NSObject, FlutterPlugin {
         } else {
             result(FlutterError(code: "INVALID_URL", message: "Invalid URL for VPN settings", details: nil))
         }
+    case "appIcon":
+        guard UIApplication.shared.supportsAlternateIcons else {
+            result(FlutterError(code: "UNSUPPORTED", message: "Alternate icons are not supported on this device.", details: nil))
+            return
+        }
+
+        let args = call.arguments as? [String: Any]
+        let styleId = args?["styleId"] as? String
+
+        let iconName: String?
+        if styleId == "blue" {
+            iconName = "AppIcon-Blue"
+        } else if styleId == "red" {
+            iconName = "AppIcon-Red"
+        } else {
+            iconName = "FestivalIcon"
+        }
+
+        UIApplication.shared.setAlternateIconName(iconName) { error in
+            if let error = error {
+                result(FlutterError(code: "ERROR", message: "Failed to set alternate icon: \(error.localizedDescription)", details: nil))
+            } else {
+                result(true)
+            }
+        }
     default:
       result(FlutterMethodNotImplemented)
     }

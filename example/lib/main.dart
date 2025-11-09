@@ -7,6 +7,8 @@ import 'package:appbridge/appbridge.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'downloader_stub.dart' if (dart.library.io) 'downloader_io.dart';
+import 'package:appbridge/src/models/bridge_response.dart'; // Import BridgeResponse
+import 'package:quick_actions/quick_actions.dart'; // Import quick_actions
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,11 +34,38 @@ class _MyAppState extends State<MyApp> {
   bool _isAppBarVisible = true;
   DateTime? _lastPopTime; // Add this field to track last back press time
 
+  final QuickActions _quickActions = const QuickActions(); // Initialize QuickActions
+  static const MethodChannel _platformChannel = MethodChannel('com.example.appbridge_example/platform'); // New MethodChannel
+
   @override
   void initState() {
     super.initState();
     _bindBackgroundIsolate();
     appbridgePlugin = Appbridge(); // Initialize Appbridge here
+    debugPrint('[_MyAppState] Appbridge singleton instance obtained in initState.');
+
+    _platformChannel.setMethodCallHandler((MethodCall call) async {
+      if (call.method == 'loadShortcutUrl') {
+        final String? url = call.arguments['url'];
+        if (url != null) {
+          final String urlToLoad = url.isEmpty
+              ? 'file:///android_asset/flutter_assets/packages/appbridge/assets/demo.html' // Default initial URL
+              : url;
+          debugPrint('Received shortcut URL from native: $urlToLoad. Loading in webview.');
+          await _webViewController!.loadUrl(urlRequest: URLRequest(url: WebUri(urlToLoad)));
+          return true;
+        }
+      }
+      return false;
+    });
+    // Setup QuickActions listener for when app starts from a shortcut
+    _quickActions.initialize((String shortcutType) {
+      // ScaffoldMessenger.of(context).showSnackBar( // Removed due to context issue in initState
+      //   SnackBar(content: Text('App launched via shortcut: $shortcutType')),
+      // );
+      debugPrint('App launched via shortcut: $shortcutType');
+      // You can implement custom logic here based on shortcutType
+    });
   }
 
   @override
@@ -121,6 +150,47 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<BridgeResponse> _handleOnAddShortcut(BuildContext context, String title, String url) async {
+    debugPrint('[_handleOnAddShortcut] title: $title, url: $url');
+    try {
+      final response = await _platformChannel.invokeMethod('addShortcuts', {'title': title, 'url': url});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response?.toString() ?? 'Shortcut added successfully!')), // Display native response message
+        );
+      }
+      return BridgeResponse.success(true); // Assuming native method returns true on success
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add shortcut: ${e.toString()}')),
+        );
+      }
+      return BridgeResponse.error(-1, 'Failed to add shortcut: ${e.toString()}');
+    }
+  }
+
+  Future<BridgeResponse> _handleOnAppIcon(BuildContext context, String styleId) async {
+    try {
+      await _platformChannel.invokeMethod('setAppIcon', {'styleId': styleId});
+      if (mounted) {
+        // Use a Builder to get a context that is a descendant of ScaffoldMessenger
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('App icon change requested for style: $styleId')),
+        );
+      }
+      return BridgeResponse.success(true);
+    } catch (e) {
+      if (mounted) {
+        // Use a Builder to get a context that is a descendant of ScaffoldMessenger
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to change app icon: ${e.toString()}')),
+        );
+      }
+      return BridgeResponse.error(-1, 'Failed to change app icon: ${e.toString()}');
+    }
+  }
+
   void _unbindBackgroundIsolate() {
     debugPrint('[_MyAppState] _unbindBackgroundIsolate called.');
     IsolateNameServer.removePortNameMapping('downloader_send_port');
@@ -167,18 +237,19 @@ class _MyAppState extends State<MyApp> {
                 }
               },
               child: InAppWebView(
-                initialUrlRequest: URLRequest(
-                  url: WebUri(
-                    'file:///android_asset/flutter_assets/packages/appbridge/assets/demo.html',
+                initialFile: 'packages/appbridge/assets/demo.html',
+                initialOptions: InAppWebViewGroupOptions(
+                  ios: IOSInAppWebViewOptions(
+                    disallowOverScroll: false,
                   ),
                 ),
-                onWebViewCreated: (controller) {
+                onWebViewCreated: (controller) async {
                   _webViewController = controller;
                   debugPrint(
                     '[_MyAppState] _webViewController set in onWebViewCreated: $_webViewController',
                   );
                   if (appbridgePlugin != null && _webViewController != null) {
-                    appbridgePlugin!.initialize(
+                    await appbridgePlugin!.initialize(
                       _webViewController!,
                       builderContext, // Pass the current context
                       onNavClose: () {
@@ -219,11 +290,10 @@ class _MyAppState extends State<MyApp> {
                           );
                         }
                       },
+                      onAppIcon: (styleId) => _handleOnAppIcon(builderContext, styleId),
+                      onAddShortcut: (title, url) => _handleOnAddShortcut(builderContext, title, url),
                     );
-                    // Add this line to call the JS function
-                    _webViewController!.evaluateJavascript(
-                      source: 'flutterIsReady();',
-                    );
+                    // This call is now being moved to onLoadStop
                   } else {
                     debugPrint(
                       '!!! appbridgePlugin or _webViewController is NULL in main onWebViewCreated. Appbridge not initialized. !!!',
@@ -231,10 +301,14 @@ class _MyAppState extends State<MyApp> {
                   }
                 },
                 onLoadStop: (controller, url) async {
-                  debugPrint('Page finished loading: $url');
-                  // The JavaScript polling for initSDK() is now handled by the web page itself.
-                },
-                onConsoleMessage: (controller, consoleMessage) {
+                                  debugPrint('Page finished loading: $url');
+                                  if (appbridgePlugin != null) {
+                                    await appbridgePlugin!.injectJavaScript();
+                                    _webViewController?.evaluateJavascript(
+                                      source: 'flutterIsReady();',
+                                    );
+                                  }
+                                },                onConsoleMessage: (controller, consoleMessage) {
                   debugPrint('Console Message: ${consoleMessage.message}');
                 },
               ),

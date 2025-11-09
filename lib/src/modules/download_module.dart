@@ -8,8 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart'; // Add dio
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart'; // Use ffmpeg_kit_flutter_new
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
+
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:flutter/foundation.dart';
 import '../models/bridge_response.dart';
@@ -301,103 +300,8 @@ class DownloadModule extends BaseModule {
   }
 
   Future<BridgeResponse> _downloadM3u8(Map<String, dynamic> params) async {
-    if (kIsWeb) {
-      return BridgeResponse.error(
-          -1, 'M3U8 downloads are not supported on the web platform.');
-    }
-    final m3u8Url = params['url'] as String?;
-    final id = params['id'] as String?;
-
-    if (m3u8Url == null || m3u8Url.isEmpty) {
-      return BridgeResponse.error(-1, 'M3U8 URL is required');
-    }
-    if (id == null) {
-      return BridgeResponse.error(-1, 'ID is required for m3u8 download');
-    }
-
-    final appDocDir = await getApplicationDocumentsDirectory();
-    final outputDir = Directory('${appDocDir.path}/m3u3_downloads');
-
-    try {
-      if (!await outputDir.exists()) {
-        await outputDir.create(recursive: true);
-      }
-
-      final outputFilePath =
-          '${outputDir.path}/output_$id.mp4'; // Use provided ID for filename
-      final arguments = ['-i', m3u8Url, '-c', 'copy', outputFilePath];
-
-      FFmpegKit.executeAsync(arguments.join(' '), (session) async {
-        final rc = await session.getReturnCode();
-        if (ReturnCode.isSuccess(rc)) {
-          final file = File(outputFilePath);
-          if (await file.exists()) {
-            final result = await ImageGallerySaver.saveFile(outputFilePath);
-            final galleryPath = result['filePath'];
-            if (galleryPath != null) {
-              eventEmitter('m3u8_download_progress', {
-                'id': id,
-                'progress': 100,
-                'status': 'completed',
-                'path': galleryPath
-              });
-            } else {
-              eventEmitter('m3u8_download_progress', {
-                'id': id,
-                'status': 'failed',
-                'error': 'Failed to get gallery path.'
-              });
-            }
-          } else {
-            debugPrint('File does not exist at path: $outputFilePath');
-            eventEmitter('m3u8_download_progress', {
-              'id': id,
-              'status': 'failed',
-              'error': 'FFmpeg reported success, but output file not found.'
-            });
-          }
-        } else {
-          final output = await session.getOutput();
-          debugPrint('FFmpeg command: ${arguments.join(' ')}');
-          debugPrint('FFmpeg output: $output');
-          eventEmitter('m3u8_download_progress', {
-            'id': id,
-            'status': 'failed',
-            'error': 'FFmpeg failed with exit code $rc. Output: $output'
-          });
-        }
-      }, (log) {
-        // You can parse log messages here if needed
-      }, (statistics) {
-        final duration = params['duration'] as num?;
-        if (duration != null && duration > 0) {
-          // a rough progress calculation
-          double progress = (statistics.getTime() / (duration * 1000));
-          if (progress < 0) progress = 0;
-          if (progress > 1) progress = 1;
-          eventEmitter('m3u8_download_progress', {
-            'id': id,
-            'progress': (progress * 100).round(),
-            'status': 'downloading'
-          });
-        } else {
-          // If no duration, we can't calculate percentage, but we can still report activity.
-          eventEmitter('m3u8_download_progress', {
-            'id': id,
-            'status': 'downloading',
-            'processed_time': statistics.getTime()
-          });
-        }
-      });
-
-      return BridgeResponse.success({
-        'id': id,
-        'message': 'M3U8 download initiated.'
-      }); // Return downloadId immediately
-    } catch (e) {
-      return BridgeResponse.error(
-          -1, 'M3U8 download and combine failed: ${e.toString()}');
-    }
+    // M3U8 downloads are not supported without ffmpeg_kit_flutter_new
+    return BridgeResponse.error(-1, 'M3U8 downloads are not supported as ffmpeg_kit_flutter_new is not available.');
   }
 
   Future<BridgeResponse> _getDefaultDir() async {
@@ -591,89 +495,7 @@ class DownloadModule extends BaseModule {
 
   Future<BridgeResponse> _getThumbnailForM3u8(
       Map<String, dynamic> params) async {
-    if (kIsWeb) {
-      return BridgeResponse.error(-1,
-          'M3U8 thumbnail generation is not supported on the web platform.');
-    }
-    final m3u8Url = params['url'] as String?;
-    if (m3u8Url == null || m3u8Url.isEmpty) {
-      return BridgeResponse.error(-1, 'M3U8 URL is required');
-    }
-
-    try {
-      final dio = Dio();
-      final hlsPlaylist = await HlsPlaylistParser.create().parseString(
-          Uri.parse(m3u8Url),
-          await dio.get(m3u8Url).then((response) => response.data));
-
-      HlsMediaPlaylist? mediaPlaylist;
-      if (hlsPlaylist is HlsMasterPlaylist) {
-        if (hlsPlaylist.variants.isNotEmpty) {
-          final firstVariant = hlsPlaylist.variants.first;
-          final firstMediaPlaylistUrl = firstVariant.url;
-          mediaPlaylist = await HlsPlaylistParser.create().parseString(
-              firstMediaPlaylistUrl,
-              await dio
-                  .get(firstMediaPlaylistUrl.toString())
-                  .then((response) => response.data)) as HlsMediaPlaylist?;
-        }
-      } else if (hlsPlaylist is HlsMediaPlaylist) {
-        mediaPlaylist = hlsPlaylist;
-      }
-
-      if (mediaPlaylist == null || mediaPlaylist.segments.isEmpty) {
-        return BridgeResponse.error(
-            -1, 'No segments found in the M3U8 playlist.');
-      }
-
-      final firstSegmentUrl = mediaPlaylist.segments.first.url;
-      if (firstSegmentUrl == null) {
-        return BridgeResponse.error(-1, 'First segment URL is null.');
-      }
-
-      final baseUrl = Uri.parse(m3u8Url).resolve('.');
-      final absoluteSegmentUrl = baseUrl.resolve(firstSegmentUrl.toString());
-
-      final appDocDir = await getApplicationDocumentsDirectory();
-      final tempDir = Directory('${appDocDir.path}/thumbnails');
-      if (!await tempDir.exists()) {
-        await tempDir.create(recursive: true);
-      }
-
-      final outputImagePath =
-          '${tempDir.path}/thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-      final arguments = [
-        '-i',
-        absoluteSegmentUrl.toString(),
-        '-vf',
-        "select='eq(n,1)'",
-        '-vframes',
-        '1',
-        outputImagePath
-      ];
-
-      final session = await FFmpegKit.execute(arguments.join(' '));
-      final rc = await session.getReturnCode();
-
-      if (ReturnCode.isSuccess(rc)) {
-        final imageFile = File(outputImagePath);
-        if (await imageFile.exists()) {
-          final imageBytes = await imageFile.readAsBytes();
-          final base64Image = base64Encode(imageBytes);
-          await imageFile.delete();
-          return BridgeResponse.success(
-              {'thumbnail': 'data:image/jpeg;base64,$base64Image'});
-        } else {
-          return BridgeResponse.error(-1, 'Thumbnail file was not created.');
-        }
-      } else {
-        final output = await session.getOutput();
-        return BridgeResponse.error(
-            -1, 'FFmpeg failed to extract thumbnail. Output: $output');
-      }
-    } catch (e) {
-      return BridgeResponse.error(-1, e.toString());
-    }
+    // M3U8 thumbnail generation is not supported without ffmpeg_kit_flutter_new
+    return BridgeResponse.error(-1, 'M3U8 thumbnail generation is not supported as ffmpeg_kit_flutter_new is not available.');
   }
 }

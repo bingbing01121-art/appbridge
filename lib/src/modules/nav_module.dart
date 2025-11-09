@@ -75,7 +75,17 @@ class NavModule extends BaseModule {
     Navigator.push(
       Appbridge().mainContext!, // Use mainContext for pushing new pages
       MaterialPageRoute(
-        builder: (context) => NavWebViewScreen(url: url, title: title),
+        builder: (context) => NavWebViewScreen(
+          url: url,
+          title: title,
+          onPageLoaded: (loadedUrl) {
+            debugPrint('NavModule: Page loaded with URL: $loadedUrl');
+            // Here you can add logic to send this URL back to the web view,
+            // or to the main app, or process it further.
+            // For example, you could emit an event back to the web view:
+            // Appbridge().emitEvent('nav.pageLoaded', {'url': loadedUrl});
+          },
+        ),
       ),
     );
 

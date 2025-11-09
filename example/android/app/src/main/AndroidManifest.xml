@@ -5,7 +5,7 @@
     <application
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:label="appbridge_example">
+        android:label="JS插件 Demo">
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -37,7 +37,33 @@
         <meta-data
             android:name="flutter_assets_path"
             android:value="flutter_assets" />
+
+        <activity-alias
+            android:name="com.example.appbridge_example.DefaultLauncherAlias"
+            android:enabled="false"
+            android:exported="false"
+            android:icon="@mipmap/icon_h5sdk"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.example.appbridge_example.FestivalLauncherAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/icon_h5sdk_new"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
     </application>
+    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
+
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

@@ -57,15 +57,7 @@ class AppbridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 handleSetVpn(on, config, result)
             }
 
-            "appIcon" -> {
-                val styleId = call.argument<String>("styleId")
-                handleAppIcon(styleId, result)
-            }
-            "addShortcut" -> {
-                val title = call.argument<String>("title")
-                val url = call.argument<String>("url")
-                handleCreateShortcut(title, url, result)
-            }
+
             "getMemoryInfo" -> getMemoryInfo(result)
             "getStorageInfo" -> getStorageInfo(result)
             "getCpuInfo" -> getCpuInfo(result)
@@ -146,76 +138,9 @@ class AppbridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     
 
     
-    private fun handleAppIcon(styleId: String?, result: Result) {
-        if (styleId == null) {
-            result.error("INVALID_ARGUMENT", "styleId cannot be null", null)
-            return
-        }
 
-        val packageManager = context.packageManager
-        val packageName = context.packageName
 
-        val componentNameDefaultAlias = ComponentName(packageName, "$packageName.DefaultLauncherAlias")
-        val componentNameFestivalAlias = ComponentName(packageName, "$packageName.MainActivityAlias")
 
-        when (styleId) {
-            "default" -> {
-                packageManager.setComponentEnabledSetting(componentNameDefaultAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-                packageManager.setComponentEnabledSetting(componentNameFestivalAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                result.success(true)
-            }
-            "festival" -> {
-                packageManager.setComponentEnabledSetting(componentNameDefaultAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                packageManager.setComponentEnabledSetting(componentNameFestivalAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-                result.success(true)
-            }
-            else -> {
-                result.error("INVALID_STYLE_ID", "Unknown styleId: $styleId", null)
-            }
-        }
-    }
-
-    private fun handleCreateShortcut(title: String?, url: String?, result: Result) {
-        if (title == null || url == null) {
-            result.error("INVALID_ARGUMENT", "Title and URL are required", null)
-            return
-        }
-
-        val shortcutIntent = Intent().apply {
-            component = ComponentName(context.packageName, "${context.packageName}.MainActivity") // Launch main activity
-            action = Intent.ACTION_VIEW
-            putExtra("url", url)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val shortcutManager = context.getSystemService(ShortcutManager::class.java)
-            if (shortcutManager.isRequestPinShortcutSupported) {
-                val pinShortcutInfo = ShortcutInfo.Builder(context, "shortcut_${System.currentTimeMillis()}")
-                    .setShortLabel(title)
-                    .setLongLabel(title)
-                    .setIcon(Icon.createWithResource(context, R.mipmap.icon_h5sdk))
-                    .setIntent(shortcutIntent)
-                    .build()
-
-                val pinnedShortcutCallbackIntent = shortcutManager.createShortcutResultIntent(pinShortcutInfo)
-                val successCallback = PendingIntent.getBroadcast(context, 0, pinnedShortcutCallbackIntent, PendingIntent.FLAG_IMMUTABLE)
-
-                try {
-                    shortcutManager.requestPinShortcut(pinShortcutInfo, successCallback.intentSender)
-                    result.success(true)
-                } catch (e: Exception) {
-                    result.error("SHORTCUT_ERROR", "Error requesting pin shortcut: ${e.message}", null)
-                }
-            } else {
-                // Fallback for launchers that don't support pinning
-                installLegacyShortcut(shortcutIntent, title)
-                result.success(true)
-            }
-        } else {
-            installLegacyShortcut(shortcutIntent, title)
-            result.success(true)
-        }
-    }
 
     private fun installLegacyShortcut(shortcutIntent: Intent, title: String) {
         val addIntent = Intent("com.android.launcher.action.INSTALL_SHORTCUT").apply {

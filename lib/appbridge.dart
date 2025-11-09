@@ -30,6 +30,8 @@ import 'src/modules/live_module.dart';
 import 'src/modules/post_module.dart';
 
 typedef LoadUrlCallback = Future<void> Function(String url, String? title);
+typedef OnAddShortcutCallback = Future<BridgeResponse> Function(String title, String url);
+typedef OnAppIconCallback = Future<BridgeResponse> Function(String styleId);
 
 // New class to hold callbacks for a specific WebView context
 class _CallbackHandler {
@@ -39,6 +41,8 @@ class _CallbackHandler {
   final NavSetBarsCallback? onNavSetBars;
   final NavReplaceCallback? onNavReplace;
   final LoadUrlCallback? onLoadUrl;
+  final OnAddShortcutCallback? onAddShortcut;
+  final OnAppIconCallback? onAppIcon;
   final BuildContext? context;
 
   _CallbackHandler({
@@ -48,6 +52,8 @@ class _CallbackHandler {
     this.onNavSetBars,
     this.onNavReplace,
     this.onLoadUrl,
+    this.onAddShortcut,
+    this.onAppIcon,
     this.context,
   });
 }
@@ -56,10 +62,11 @@ class Appbridge {
   // Singleton setup
   static final Appbridge _instance = Appbridge._internal();
   factory Appbridge() {
+    debugPrint('Appbridge: factory constructor called, returning singleton instance.');
     return _instance;
   }
   Appbridge._internal() {
-    debugPrint('Appbridge: _internal constructor called.');
+    debugPrint('Appbridge: _internal constructor called, creating singleton instance.');
     _appMethodChannel = const MethodChannel('com.example.appbridge_h5/app');
     _coreModule = CoreModule(_appMethodChannel!);
     _storageModule = StorageModule();
@@ -129,6 +136,7 @@ class Appbridge {
     _activeWebViewControllers.remove(controller);
     if (_callbackStack.isNotEmpty) {
       _callbackStack.removeLast();
+      debugPrint('Appbridge: _callbackStack after remove: ${_callbackStack.length} elements.');
     }
     if (_activeWebViewControllers.isNotEmpty) {
       _webViewController =
@@ -184,7 +192,10 @@ class Appbridge {
     NavSetBarsCallback? onNavSetBars,
     NavReplaceCallback? onNavReplace,
     LoadUrlCallback? onLoadUrl,
+    OnAddShortcutCallback? onAddShortcut,
+    OnAppIconCallback? onAppIcon,
   }) async {
+    debugPrint('Appbridge: initialize method entered.'); // New debug print
     debugPrint(
         'Appbridge: initialize called with webViewController: $webViewController, context: $context');
     registerWebViewController(webViewController);
@@ -201,6 +212,14 @@ class Appbridge {
       context: context, // Pass context to callback handler
     );
     _callbackStack.add(callbackHandler);
+    debugPrint('Appbridge: initialize - onAddShortcut passed: ${onAddShortcut != null}, onAppIcon passed: ${onAppIcon != null}');
+    debugPrint('Appbridge: _callbackStack after add: ${_callbackStack.length} elements.');
+
+    // Update CoreModule with the new callbacks
+    _coreModule?.updateCallbacks(
+      onAddShortcut: onAddShortcut,
+      onAppIcon: onAppIcon,
+    );
 
     debugPrint('Appbridge: Context added to stack for: $context');
 
@@ -240,12 +259,12 @@ class Appbridge {
     _postModule?.onLoadUrl = (url, title) =>
         _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
 
-    if (_webViewController != null) {
-      await _injectJavaScript();
-    } else {
-      debugPrint(
-          'Appbridge: _webViewController is null in initialize, skipping JavaScript injection.');
-    }
+    //    if (_webViewController != null) {
+//      await _injectJavaScript();
+//    } else {
+//      debugPrint(
+//          'Appbridge: _webViewController is null in initialize, skipping JavaScript injection.');
+//    }
 
     _isReady = true;
   }
@@ -254,7 +273,7 @@ class Appbridge {
       _callbackStack.isNotEmpty ? _callbackStack.last.context : null;
   BuildContext? get mainContext => _mainContext;
 
-  Future<void> _injectJavaScript() async {
+  Future<void> injectJavaScript() async {
     debugPrint(
         'Appbridge: _injectJavaScript called. Attempting to inject JavaScript.');
     const jsCode = '''

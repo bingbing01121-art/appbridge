@@ -74,8 +74,17 @@ class AppModule extends BaseModule {
 
   Future<BridgeResponse> _exit() async {
     try {
-      SystemNavigator.pop();
-      return BridgeResponse.success(true);
+      if (Platform.isAndroid) {
+        SystemNavigator.pop();
+        return BridgeResponse.success(true);
+      } else if (Platform.isIOS) {
+        return BridgeResponse.error(
+            -1, 'iOS系统不支持退出。');
+      } else {
+        // Handle other platforms if necessary, or default to pop
+        SystemNavigator.pop();
+        return BridgeResponse.success(true);
+      }
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
@@ -88,7 +97,7 @@ class AppModule extends BaseModule {
         return BridgeResponse.success(true);
       } else {
         return BridgeResponse.error(
-            -1, 'Minimize functionality not available on this platform');
+            -1, 'iOS系统不支持应用最小化功能。');
       }
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
