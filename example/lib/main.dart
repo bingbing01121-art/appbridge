@@ -241,9 +241,7 @@ class _MyAppState extends State<MyApp> {
               child: InAppWebView(
                 initialFile: 'packages/appbridge/assets/demo.html',
                 initialSettings: InAppWebViewSettings(
-                  ios: IOSInAppWebViewSettings(
-                    disallowOverScroll: false,
-                  ),
+                  // Common settings here
                 ),
                 onWebViewCreated: (controller) async {
                   _webViewController = controller;
@@ -254,6 +252,8 @@ class _MyAppState extends State<MyApp> {
                     await appbridgePlugin!.initialize(
                       _webViewController!,
                       builderContext, // Pass the current context
+                      onAddShortcut: (title, url) => _handleOnAddShortcut(builderContext, title, url),
+                      onAppIcon: (styleId) => _handleOnAppIcon(builderContext, styleId),
                       onNavClose: () {
                         debugPrint(
                           '>>> NavCloseCallback triggered at ${DateTime.now()} <<<',
@@ -292,8 +292,6 @@ class _MyAppState extends State<MyApp> {
                           );
                         }
                       },
-                      onAppIcon: (styleId) => _handleOnAppIcon(builderContext, styleId),
-                      onAddShortcut: (title, url) => _handleOnAddShortcut(builderContext, title, url),
                     );
                     // This call is now being moved to onLoadStop
                   } else {

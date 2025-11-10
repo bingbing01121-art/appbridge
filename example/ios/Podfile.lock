@@ -1,6 +1,4 @@
 PODS:
-  - app_links (6.4.1):
-    - Flutter
   - appbridge (0.0.1):
     - Flutter
   - battery_plus (1.0.0):
@@ -60,7 +58,6 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
-  - app_links (from `.symlinks/plugins/app_links/ios`)
   - appbridge (from `.symlinks/plugins/appbridge/ios`)
   - battery_plus (from `.symlinks/plugins/battery_plus/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
@@ -91,8 +88,6 @@ SPEC REPOS:
     - OrderedSet
 
 EXTERNAL SOURCES:
-  app_links:
-    :path: ".symlinks/plugins/app_links/ios"
   appbridge:
     :path: ".symlinks/plugins/appbridge/ios"
   battery_plus:
@@ -143,31 +138,30 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/volume_controller/ios"
 
 SPEC CHECKSUMS:
-  app_links: 3dbc685f76b1693c66a6d9dd1e9ab6f73d97dc0a
   appbridge: 3cbe4ce5acf4a53d5f10a19524bf5564c78208ef
   battery_plus: b42253f6d2dde71712f8c36fef456d99121c5977
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
-  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_downloader: 78da0da1084e709cbfd3b723c7ea349c71681f09
   flutter_inappwebview_ios: b89ba3482b96fb25e00c967aae065701b66e9b99
   flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
   fluttertoast: 2c67e14dce98bbdb200df9e1acf610d7a6264ea1
   gallery_saver_plus: 61c8a831d5975e2bf57f87bcd64379dcc7d29ff2
   image_gallery_saver: 14711d79da40581063e8842a11acf1969d781ed7
-  image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
+  image_picker_ios: 7fe1ff8e34c1790d6fff70a32484959f563a928a
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
-  path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
+  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  quick_actions_ios: 500fcc11711d9f646739093395c4ae8eec25f779
+  quick_actions_ios: 4b07fb49d8d8f3518d7565fbb7a91014067a7d82
   screen_brightness_ios: 9953fd7da5bd480f1a93990daeec2eb42d4f3b52
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
-  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
-  url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
-  video_player_avfoundation: dd410b52df6d2466a42d28550e33e4146928280a
+  url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
+  video_player_avfoundation: 2cef49524dd1f16c5300b9cd6efd9611ce03639b
   volume_controller: 3657a1f65bedb98fa41ff7dc5793537919f31b12
 
 PODFILE CHECKSUM: 9457f736acd5becc7608405ca0ad37e54eb275d0

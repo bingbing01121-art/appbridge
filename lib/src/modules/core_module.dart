@@ -11,7 +11,10 @@ import '../models/bridge_response.dart';
 import '../models/environment_info.dart';
 import '../models/version_info.dart';
 import 'base_module.dart';
-import 'package:appbridge/appbridge.dart'; // Re-add Appbridge import
+
+typedef Future<BridgeResponse> OnAddShortcutCallback(String title, String url);
+typedef Future<BridgeResponse> OnAppIconCallback(String styleId);
+
 
 /// Core模块实现
 class CoreModule extends BaseModule {

@@ -142,6 +142,7 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
             _appbridgePlugin.registerWebViewController(_webViewController!);
 
             if (!mounted) return; // Add this line
+            // ignore: use_build_context_synchronously
             _appbridgePlugin.initialize(
               _webViewController!,
               context,

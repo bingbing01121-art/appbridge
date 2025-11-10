@@ -31,7 +31,6 @@ dependencies:
   fluttertoast: ^9.0.0
   flutter_pinned_shortcut_plus: ^0.0.2
 
-  app_links: ^6.4.1
   get: ^4.6.6
 
   flutter_hls_parser: ^2.0.1

@@ -47,6 +47,7 @@ class MainActivity : FlutterActivity() {
             action = Intent.ACTION_MAIN // Or a custom action if needed
             addCategory(Intent.CATEGORY_LAUNCHER)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra("shortcut_url", url)
         }
 
         val shortcut = ShortcutInfoCompat.Builder(applicationContext, title)
@@ -89,7 +90,7 @@ class MainActivity : FlutterActivity() {
 
         when (styleId) {
             "default" -> {
-                packageManager.setComponentEnabledSetting(componentNameMainActivity, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                packageManager.setComponentEnabledSetting(componentNameDefaultAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
                 result.success(true)
             }
             "festival" -> {
@@ -98,7 +99,7 @@ class MainActivity : FlutterActivity() {
             }
             else -> {
                 // If an unknown styleId is provided, re-enable the main activity
-                packageManager.setComponentEnabledSetting(componentNameMainActivity, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                packageManager.setComponentEnabledSetting(componentNameDefaultAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
                 result.error("INVALID_STYLE_ID", "Unknown styleId: $styleId", null)
             }
         }
