@@ -823,7 +823,7 @@ packages:
     source: hosted
     version: "5.0.5"
   quick_actions:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: quick_actions
       sha256: "7e35dd6a21f5bbd21acf6899039eaf85001a5ac26d52cbd6a8a2814505b90798"

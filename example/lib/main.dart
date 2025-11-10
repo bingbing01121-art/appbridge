@@ -152,6 +152,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<BridgeResponse> _handleOnAddShortcut(BuildContext context, String title, String url) async {
     debugPrint('[_handleOnAddShortcut] title: $title, url: $url');
+    if (!mounted) return BridgeResponse.error(-1, 'Widget not mounted');
     try {
       final response = await _platformChannel.invokeMethod('addShortcuts', {'title': title, 'url': url});
       if (mounted) {
@@ -171,6 +172,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<BridgeResponse> _handleOnAppIcon(BuildContext context, String styleId) async {
+    if (!mounted) return BridgeResponse.error(-1, 'Widget not mounted');
     try {
       await _platformChannel.invokeMethod('setAppIcon', {'styleId': styleId});
       if (mounted) {
@@ -238,8 +240,8 @@ class _MyAppState extends State<MyApp> {
               },
               child: InAppWebView(
                 initialFile: 'packages/appbridge/assets/demo.html',
-                initialOptions: InAppWebViewGroupOptions(
-                  ios: IOSInAppWebViewOptions(
+                initialSettings: InAppWebViewSettings(
+                  ios: IOSInAppWebViewSettings(
                     disallowOverScroll: false,
                   ),
                 ),
