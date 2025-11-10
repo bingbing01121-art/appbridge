@@ -1,9 +1,9 @@
 name: appbridge
 description:  This is a rich flutter javascript interactive plugin.
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/bingbing01121-art/appbridge
 repository: https://github.com/bingbing01121-art/appbridge
-issue_tracker: https://github.com/bingbing01121-art/appbridge/issues
+issue_tracker: https://github.com/bingbing01121-art/appbridge/issues/issues
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -27,7 +27,6 @@ dependencies:
   battery_plus: ^7.0.0
   package_info_plus: ^9.0.0
   connectivity_plus: ^7.0.0
-  json_annotation: ^4.8.1
   quick_actions: ^1.1.0
   fluttertoast: ^9.0.0
   flutter_pinned_shortcut_plus: ^0.0.2
@@ -48,6 +47,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  json_annotation: ^4.8.1
   flutter_local_notifications_platform_interface: ^9.0.0
 
 # For information on the generic Dart part of this file, see the

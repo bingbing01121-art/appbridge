@@ -1,6 +1,6 @@
 {
   "name": "appbridge-h5",
-  "version": "1.1.0",
+  "version": "1.0.1",
   "description": "统一的 H5 ↔ 原生 SDK 桥接接口，适用于公司所有 App WebView 调用场景",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

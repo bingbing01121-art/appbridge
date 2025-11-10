@@ -244,7 +244,7 @@ class _SimulatedUpdateDialogContentState
         ),
         const SizedBox(height: 20),
         const Text(
-          '发现新版本 V2.0.0',
+          '发现新版本 V1.0.2',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20.0,
@@ -346,19 +346,10 @@ class _SimulatedUpdateDialogContentState
                     fontWeight: FontWeight.bold,
                     color: Colors.blue)), // Changed to blue
             SizedBox(height: 8),
-            Text('  • [新增] 全新的虚拟场景模拟功能，让测试更便捷。',
+            Text('  • [新增] 1.0.0基础版基于安卓实现基本功能',
                 style: TextStyle(color: Colors.blue)), // Changed to blue
             SizedBox(height: 4),
-            Text('  • [优化] 对话框的美观度和用户体验，更加贴近原生质感。',
-                style: TextStyle(color: Colors.blue)), // Changed to blue
-            SizedBox(height: 4),
-            Text('  • [优化] 长日志滚动支持，再多内容也能优雅展示。',
-                style: TextStyle(color: Colors.blue)), // Changed to blue
-            SizedBox(height: 4),
-            Text('  • [修复] 若干已知问题，提升应用稳定性与性能。',
-                style: TextStyle(color: Colors.blue)), // Changed to blue
-            SizedBox(height: 4),
-            Text('  • [安全] 更新了核心依赖，增强了安全性。',
+            Text('  • [优化] 1.0.1处理添加快捷方式及修改图标功能为插件通信，具体实现由消费端实现和修复ios编译兼容',
                 style: TextStyle(color: Colors.blue)), // Changed to blue
           ],
         ),
