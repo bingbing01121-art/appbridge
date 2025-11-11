@@ -9,10 +9,13 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.util.Log
+import android.net.Uri
 
 class MainActivity : FlutterActivity() {
     private val APP_CHANNEL = "com.example.appbridge_example/platform"
+    private val DEEPLINK_CHANNEL = "com.example.appbridge_example/deeplink"
     private lateinit var appMethodChannel: MethodChannel
+    private lateinit var deepLinkMethodChannel: MethodChannel
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -39,7 +42,28 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+
+        deepLinkMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEPLINK_CHANNEL)
+        deepLinkMethodChannel.setMethodCallHandler {
+            call, result ->
+            when (call.method) {
+                "openDeepLink" -> {
+                    val url = call.argument<String>("url")
+                    if (url != null) {
+                        openDeepLink(url, result)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "URL cannot be null", null)
+                    }
+                }
+                "parseDeepLink" -> {
+                    parseDeepLink(result)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         handleIntentUrl(intent) // Handle initial intent when engine is configured
+        handleDeepLinkIntent(intent) // Handle initial deep link intent
     }
 
     private fun addShortcuts(title: String, url: String, result: MethodChannel.Result) {
@@ -47,6 +71,7 @@ class MainActivity : FlutterActivity() {
             action = Intent.ACTION_MAIN // Or a custom action if needed
             addCategory(Intent.CATEGORY_LAUNCHER)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra("shortcut_url", url)
         }
 
         val shortcut = ShortcutInfoCompat.Builder(applicationContext, title)
@@ -63,6 +88,7 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntentUrl(intent)
+        handleDeepLinkIntent(intent)
     }
 
     private fun handleIntentUrl(intent: Intent?) {
@@ -89,7 +115,7 @@ class MainActivity : FlutterActivity() {
 
         when (styleId) {
             "default" -> {
-                packageManager.setComponentEnabledSetting(componentNameMainActivity, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                packageManager.setComponentEnabledSetting(componentNameDefaultAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
                 result.success(true)
             }
             "festival" -> {
@@ -98,9 +124,44 @@ class MainActivity : FlutterActivity() {
             }
             else -> {
                 // If an unknown styleId is provided, re-enable the main activity
-                packageManager.setComponentEnabledSetting(componentNameMainActivity, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                packageManager.setComponentEnabledSetting(componentNameDefaultAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
                 result.error("INVALID_STYLE_ID", "Unknown styleId: $styleId", null)
             }
+        }
+    }
+
+    private fun openDeepLink(url: String, result: MethodChannel.Result) {
+        try {
+            val uri = Uri.parse(url)
+            val intent = Intent(Intent.ACTION_VIEW, uri)
+            startActivity(intent)
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("DEEPLINK_ERROR", "Failed to open deep link: ${e.message}", null)
+        }
+    }
+
+    private fun parseDeepLink(result: MethodChannel.Result) {
+        val uri = intent?.data
+        if (uri != null) {
+            result.success(mapOf(
+                "url" to uri.toString(),
+                "scheme" to uri.scheme,
+                "host" to uri.host,
+                "path" to uri.path,
+                "queryParameters" to uri.queryParameterNames.associateWith { name -> uri.getQueryParameter(name) }
+            ))
+        } else {
+            result.success(null)
+        }
+    }
+
+    private fun handleDeepLinkIntent(intent: Intent?) {
+        val appLinkData: Uri? = intent?.data
+        if (appLinkData != null) {
+            Log.d("MainActivity", "Received deep link: $appLinkData")
+            // You can send this data to Flutter if needed, e.g., via a separate MethodChannel or EventChannel
+            // For now, parseDeepLink will get the initial intent data
         }
     }
 }

@@ -112,45 +112,103 @@ A feature-rich Flutter plugin designed to bridge H5 pages with native app intera
 *   **PostModule:**
     *   `open`: Opens the post details page.
 
-## ✨ Quick Start
+## ✨ Installation
 
-Appbridge is a Flutter plugin project that provides a bridge for H5 pages to interact with native applications.
-
-To use this plugin in your Flutter project, add `appbridge` as a dependency in your `pubspec.yaml` file:
+To use this plugin, add `appbridge` as a dependency in your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  appbridge: ^1.0.0 # Use the latest version
+  appbridge: ^1.0.1 # Use the latest version
 ```
 
-Run `flutter pub get` to fetch the dependencies.
+Then, run `flutter pub get` to fetch the dependencies.
 
-### iOS Integration
+### iOS Setup
 
-1.  **`Info.plist` Configuration:**
-    *   If your app requires access to permissions like camera or photo library, add the corresponding privacy descriptions in `Info.plist` (`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, etc.).
-    *   Configure URL Schemes or Universal Links if applicable.
+1.  **Enable Background Modes:** In Xcode, go to **Signing & Capabilities** > **+ Capability** > **Background Modes**, and enable **Background fetch** and **Background processing**.
+2.  **Add SQLite Library:** In Xcode, go to **Build Phases** > **Link Binary With Libraries**, and add `libsqlite3.tbd`.
+3.  **Configure AppDelegate:** In your `AppDelegate.swift` file, register the `FlutterDownloaderPlugin`.
 
-2.  **`AppDelegate.swift` or `AppDelegate.m` Configuration:**
-    *   Ensure your `AppDelegate` correctly handles native method calls from `Appbridge`.
+    ```swift
+    import UIKit
+    import Flutter
+    import flutter_downloader
 
-### Android Integration
+    @UIApplicationMain
+    @objc class AppDelegate: FlutterAppDelegate {
+      override func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+      ) -> Bool {
+        GeneratedPluginRegistrant.register(with: self)
+        FlutterDownloaderPlugin.setPluginRegistrantCallback(registerPlugins)
+        return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+      }
+    }
 
-1.  **`AndroidManifest.xml` Configuration:**
-    *   If your app requires specific permissions, add the `<uses-permission>` tags in `AndroidManifest.xml`.
-    *   Declare Activities or Services if applicable.
+    private func registerPlugins(registry: FlutterPluginRegistry) {
+        if (!registry.hasPlugin("FlutterDownloaderPlugin")) {
+            FlutterDownloaderPlugin.register(with: registry.registrar(forPlugin: "FlutterDownloaderPlugin")!)
+        }
+    }
+    ```
+4.  **Configure Info.plist:**
+    *   Add the `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, and other necessary privacy descriptions if your app uses those features.
+    *   To allow HTTP requests for downloads, add the following to your `Info.plist`:
+        ```xml
+        <key>NSAppTransportSecurity</key>
+        <dict>
+            <key>NSAllowsArbitraryLoads</key>
+            <true/>
+        </dict>
+        ```
 
-2.  **`MainActivity.java` or `MainActivity.kt` Configuration:**
-    *   Ensure your `MainActivity` correctly handles native method calls from `Appbridge`.
+### Android Setup
+
+1.  **Configure AndroidManifest.xml:**
+    *   Add the `REQUEST_INSTALL_PACKAGES` permission if you need to install APKs:
+        ```xml
+        <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+        ```
+    *   Add the `DownloadedFileProvider` to open downloaded files from notifications. Make sure to replace `YOUR_APPLICATION_ID` with your actual application ID.
+        ```xml
+        <provider
+            android:name="vn.hunghd.flutterdownloader.DownloadedFileProvider"
+            android:authorities="${applicationId}.flutter_downloader.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths"/>
+        </provider>
+        ```
+    *   Add the `FlutterDownloaderInitializer` to configure the number of concurrent download tasks.
+        ```xml
+        <provider
+            android:name="vn.hunghd.flutterdownloader.FlutterDownloaderInitializer"
+            android:authorities="${applicationId}.flutter-downloader-init"
+            android:exported="false">
+            <meta-data
+                android:name="MAX_CONCURRENT_TASKS"
+                android:value="5" />
+        </provider>
+        ```
+2.  **Create `provider_paths.xml`:** In your `android/app/src/main/res/xml` directory, create a file named `provider_paths.xml` with the following content:
+    ```xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <paths xmlns:android="http://schemas.android.com/apk/res/android">
+        <external-path name="external_files" path="."/>
+    </paths>
+    ```
 
 ## 💻 Usage Example
 
-以下是 `appbridge` 插件的基本使用示例：
+Here is a basic example of how to use the `appbridge` plugin:
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:appbridge/appbridge.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart'; // For InAppWebViewController
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 void main() {
   runApp(const MyApp());
@@ -165,20 +223,16 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final Appbridge _appbridgePlugin = Appbridge();
-  String _message = '点击按钮获取信息';
-  InAppWebViewController? _webViewController; // Declare a controller
+  InAppWebViewController? _webViewController;
 
   @override
   void initState() {
     super.initState();
-    // Initialize FlutterDownloader if you plan to use download features
-    // FlutterDownloader.initialize(debug: true);
   }
 
-  // This method would typically be called when your WebView is created and ready
   void _initializeAppbridge(BuildContext context) {
     _appbridgePlugin.initialize(
-      _webViewController!, // Pass your InAppWebViewController
+      _webViewController!,
       context,
       onNavOpen: (url) {
         // Handle navigation open requests, e.g., push a new WebView screen
@@ -188,44 +242,7 @@ class _MyAppState extends State<MyApp> {
         // Handle navigation close requests, e.g., pop the current screen
         print('Closing current navigation');
       },
-      onNavSetTitle: (title) {
-        // Handle setting navigation bar title
-        print('Setting title: $title');
-      },
-      onNavSetBars: (visible) {
-        // Handle setting navigation bar visibility
-        print('Setting bars visibility: $visible');
-      },
-      onNavReplace: (url, title) {
-        // Handle navigation replace requests
-        print('Replacing navigation with: $url, title: $title');
-      },
-      onLoadUrl: (url, title) {
-        // Handle internal URL loading for modules like Video, Novel, Comics, Post
-        print('Loading internal URL: $url, title: $title');
-      },
     );
-
-    // Example: Listen to custom events from H5
-    _appbridgePlugin.events.on('customEvent', (payload) {
-      setState(() {
-        _message = '收到自定义事件: $payload';
-      });
-    });
-
-    // Example: Listen to download events
-    _appbridgePlugin.events.on('download.started', (payload) {
-      print('Download started: $payload');
-    });
-    _appbridgePlugin.events.on('download_resumed', (payload) {
-      print('Download resumed: $payload');
-    });
-    _appbridgePlugin.events.on('download_canceled', (payload) {
-      print('Download canceled: $payload');
-    });
-    _appbridgePlugin.events.on('m3u8_download_progress', (payload) {
-      print('M3U8 Download progress: $payload');
-    });
   }
 
   @override
@@ -233,485 +250,25 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Appbridge 插件示例'),
+          title: const Text('Appbridge Plugin Example'),
         ),
-        body: Builder(
-          // Use Builder to get a context within the Scaffold
-          builder: (BuildContext scaffoldContext) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text('插件消息: $_message
-'),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Ensure _webViewController is initialized before calling _initializeAppbridge
-                      // This is a simplified example. In a real app, _webViewController would come from an InAppWebView widget.
-                      if (_webViewController == null) {
-                        // For demonstration, we'll mock a controller or ensure it's set up
-                        // In a real app, you'd have an InAppWebView widget that provides this.
-                        print("Please ensure InAppWebViewController is initialized.");
-                        return;
-                      }
-                      _initializeAppbridge(scaffoldContext); // Pass scaffoldContext
-                      // Example: Call core module method to get app version
-                      final response = await _appbridgePlugin.core.getVersion();
-                      setState(() {
-                        _message = '应用版本: ${response.data?['appVersion']}';
-                      });
-                    },
-                    child: const Text('初始化 Appbridge 并获取应用版本'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call UI module to show Toast message
-                      await _appbridgePlugin.ui.toast(message: '来自 Appbridge 的问候！');
-                    },
-                    child: const Text('显示 Toast'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Nav module to open a new page
-                      await _appbridgePlugin.nav.open(url: 'https://www.google.com', title: '谷歌');
-                    },
-                    child: const Text('打开谷歌'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Storage module to set data
-                      await _appbridgePlugin.storage.set(key: 'username', value: 'FlutterUser');
-                      setState(() {
-                        _message = '已设置 username 到存储';
-                      });
-                    },
-                    child: const Text('设置存储数据'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Storage module to get data
-                      final response = await _appbridgePlugin.storage.get(key: 'username');
-                      setState(() {
-                        _message = '获取到的 username: ${response.data?['value']}';
-                      });
-                    },
-                    child: const Text('获取存储数据'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Permission module to request camera permission
-                      final response = await _appbridgePlugin.permission.request(name: 'camera');
-                      setState(() {
-                        _message = '相机权限状态: ${response.data}';
-                      });
-                    },
-                    child: const Text('请求相机权限'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Device module to get device information
-                      final response = await _appbridgePlugin.device.getInfo();
-                      setState(() {
-                        _message = '设备型号: ${response.data?['model']}';
-                      });
-                    },
-                    child: const Text('获取设备信息'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Share module to share text
-                      await _appbridgePlugin.share.open(text: 'Hello from Appbridge!', url: 'https://pub.dev/packages/appbridge');
-                    },
-                    child: const Text('分享文本和链接'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Notifications module to show local notification
-                      await _appbridgePlugin.notifications.showLocal(id: '1', title: 'Appbridge 通知', body: '这是一条来自 Appbridge 的通知！');
-                    },
-                    child: const Text('显示本地通知'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Auth module to get Token
-                      final response = await _appbridgePlugin.auth.getToken();
-                      setState(() {
-                        _message = '获取到的 Token: ${response.data?['token']}';
-                      });
-                    },
-                    child: const Text('获取 Token'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Payment module to simulate payment
-                      await _appbridgePlugin.payment.pay(productId: 'product_123', payType: 'wechat');
-                      setState(() {
-                        _message = '模拟支付完成';
-                      });
-                    },
-                    child: const Text('模拟支付'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Example: Call Download module to start download
-                      await _appbridgePlugin.download.start(url: 'https://example.com/sample.apk', fileName: 'sample.apk');
-                      setState(() {
-                        _message = '开始下载 sample.apk';
-                      });
-                    },
-                    child: const Text('开始下载文件'),
-                  ),
-                  // Add more usage examples for other modules here
-                ],
-              ),
-            );
+        body: InAppWebView(
+          initialFile: 'packages/appbridge/assets/demo.html',
+          onWebViewCreated: (controller) {
+            _webViewController = controller;
+            _initializeAppbridge(context);
+          },
+          onLoadStop: (controller, url) {
+            _webViewController?.evaluateJavascript(source: 'flutterIsReady();');
+          },
+          onConsoleMessage: (controller, consoleMessage) {
+            print(consoleMessage);
           },
         ),
       ),
     );
   }
 }
-```
-
-### Detailed API Usage
-
-#### 核心模块 (CoreModule)
-
-```dart
-// Example: Get app version information
-final versionResponse = await Appbridge().core.getVersion();
-print('App Version: ${versionResponse.data?['appVersion']}');
-
-// Example: Get environment information
-final envResponse = await Appbridge().core.getEnv();
-print('Environment Info: ${envResponse.data}');
-
-// Example: Check if a method exists
-final hasMethod = await Appbridge().core.has(path: 'ui.toast');
-print('Does ui.toast exist? $hasMethod');
-
-// Example: Get list of all available methods
-final capabilities = await Appbridge().core.getCapabilities();
-print('Capabilities: $capabilities');
-
-// Example: Switch app icons (iOS only, requires native setup)
-// await Appbridge().core.appIcon(styleId: 'alternateIconName');
-```
-
-#### 事件模块 (EventsModule)
-
-```dart
-// Example: Subscribe to an event
-final offFunction = Appbridge().events.on('myCustomEvent', (payload) {
-  print('Received myCustomEvent: $payload');
-});
-
-// Example: Trigger an event
-Appbridge().events.emit('myCustomEvent', {'data': 'Hello from Flutter!'});
-
-// Example: Unsubscribe
-// offFunction.off(); // Call the returned function to unsubscribe
-```
-
-#### 应用模块 (AppModule)
-
-```dart
-// Example: Get app status
-final statusResponse = await Appbridge().app.getStatus();
-print('App Status: ${statusResponse.data}');
-
-// Example: Open app settings
-await Appbridge().app.openSettings();
-
-// Example: Exit app
-// await Appbridge().app.exit();
-
-// Example: Minimize app (Android only)
-// await Appbridge().app.minimize();
-
-// Example: Check for app updates (Android only)
-final updateCheck = await Appbridge().app.update.check();
-print('Update available: ${updateCheck.data?['hasUpdate']}');
-
-// Example: Apply app updates (Android only)
-// await Appbridge().app.update.apply();
-```
-
-#### 导航模块 (NavModule)
-
-```dart
-// Example: Open an external URL
-await Appbridge().nav.open(url: 'https://www.example.com', title: '示例网站');
-
-// Example: Close current navigation
-// await Appbridge().nav.close();
-
-// Example: Replace current navigation page URL
-// await Appbridge().nav.replace(url: 'https://new.example.com', title: '新网站');
-
-// Example: Set navigation bar title
-// await Appbridge().nav.setTitle(title: '我的新标题');
-
-// Example: Control navigation bar visibility
-// await Appbridge().nav.setBars(visible: false);
-```
-
-#### UI 模块 (UIModule)
-
-```dart
-// Example: Show Toast message
-await Appbridge().ui.toast(message: '这是一个 Toast 消息！');
-
-// Example: Show Alert dialog
-await Appbridge().ui.alert(title: '提示', message: '操作已完成。');
-
-// Example: Show Confirm dialog
-final confirmed = await Appbridge().ui.confirm(title: '确认', message: '您确定要继续吗？');
-print('用户确认: $confirmed');
-
-// Example: Show Action Sheet
-final selectedOption = await Appbridge().ui.actionSheet(
-  title: '选择操作',
-  items: [
-    {'id': 'option1', 'text': '选项一'},
-    {'id': 'option2', 'text': '选项二'},
-  ],
-);
-print('选择的选项: $selectedOption');
-
-// Example: Show loading indicator
-// final dismissLoading = await Appbridge().ui.loading(visible: true, text: '请稍候...');
-// Future.delayed(Duration(seconds: 3), () => dismissLoading()); // 3秒后关闭
-
-// Example: Trigger light haptic feedback
-await Appbridge().ui.haptics(style: 'light');
-
-// Example: Get safe area insets
-final safeArea = await Appbridge().ui.safeArea();
-print('安全区域: $safeArea');
-```
-
-#### 存储模块 (StorageModule)
-
-```dart
-// Example: Set a string value
-await Appbridge().storage.set(key: 'user_id', value: '12345');
-
-// Example: Set a string value with expiration (TTL 60 seconds)
-await Appbridge().storage.set(key: 'session_token', value: 'abcde', ttlSec: 60);
-
-// Example: Get a value
-final userId = await Appbridge().storage.get(key: 'user_id');
-print('用户ID: ${userId.data?['value']}');
-
-// Example: Remove a value
-await Appbridge().storage.remove(key: 'user_id');
-
-// Example: Clear all storage
-// await Appbridge().storage.clear();
-```
-
-#### 权限模块 (PermissionModule)
-
-```dart
-// Example: Check camera permission
-final cameraStatus = await Appbridge().permission.check(name: 'camera');
-print('相机权限状态: $cameraStatus');
-
-// Example: Request photo library permission
-final photoGranted = await Appbridge().permission.request(name: 'photo');
-print('相册权限是否授予: $photoGranted');
-
-// Example: Ensure notification permission and handle
-final notificationResult = await Appbridge().permission.ensure(name: 'notifications');
-print('通知权限处理结果: $notificationResult');
-```
-
-#### 设备模块 (DeviceModule)
-
-```dart
-// Example: Get device ID
-final deviceIds = await Appbridge().device.getIds();
-print('设备 ID: ${deviceIds.data?['deviceId']}');
-
-// Example: Get detailed device information
-final deviceInfo = await Appbridge().device.getInfo();
-print('设备型号: ${deviceInfo.data?['model']}, OS: ${deviceInfo.data?['osVersion']}');
-
-// Example: Get battery information
-final batteryInfo = await Appbridge().device.getBattery();
-print('电池电量: ${batteryInfo.data?['level']}, 充电中: ${batteryInfo.data?['charging']}');
-
-// Example: Get storage information
-final storageInfo = await Appbridge().device.getStorageInfo();
-print('总存储: ${storageInfo.data?['total']} ${storageInfo.data?['unit']}');
-
-// Example: Get memory information
-final memoryInfo = await Appbridge().device.getMemoryInfo();
-print('总内存: ${memoryInfo.data?['total']} ${memoryInfo.data?['unit']}');
-
-// Example: Get CPU information
-final cpuInfo = await Appbridge().device.getCpuInfo();
-print('CPU 核心数: ${cpuInfo.data?['cores']}, 架构: ${cpuInfo.data?['arch']}');
-```
-
-#### 分享模块 (ShareModule)
-
-```dart
-// Example: Share text and URL
-await Appbridge().share.open(text: '看看这个 Flutter 插件！', url: 'https://pub.dev/packages/appbridge');
-
-// Example: Copy link to clipboard
-await Appbridge().share.copyLink(url: 'https://pub.dev/packages/appbridge');
-
-// Example: Get clipboard content
-final clipboardContent = await Appbridge().share.getClipboard();
-print('剪贴板内容: ${clipboardContent.data}');
-
-// Example: Set clipboard content
-await Appbridge().share.setClipboard(text: '这是要复制到剪贴板的文本。');
-```
-
-#### 通知模块 (NotificationsModule)
-
-```dart
-// Example: Check notification permission
-final notificationPermission = await Appbridge().notifications.checkPermission();
-print('通知权限已授予: $notificationPermission');
-
-// Example: Show local notification
-await Appbridge().notifications.showLocal(
-  id: '101',
-  title: '新消息',
-  body: '您有一条新消息，请查收！',
-  payload: {'page': 'messages', 'id': '555'}, // 可选的自定义数据
-);
-```
-
-#### 认证模块 (AuthModule)
-
-```dart
-// Example: Get user Token
-final tokenResponse = await Appbridge().auth.getToken();
-print('获取到的 Token: ${tokenResponse.data?['token']}');
-
-// Example: Refresh user Token
-final refreshTokenResponse = await Appbridge().auth.refreshToken();
-print('刷新后的 Token: ${refreshTokenResponse.data?['token']}');
-```
-
-#### 支付模块 (PaymentModule)
-
-```dart
-// Example: Simulate payment
-final paymentResult = await Appbridge().payment.pay(productId: 'premium_sub', payType: 'alipay');
-print('支付结果: ${paymentResult.data}');
-```
-
-#### 下载模块 (DownloadModule)
-
-```dart
-// Example: Start file download
-final downloadTask = await Appbridge().download.start(
-  url: 'https://speed.hetzner.de/100MB.bin',
-  fileName: 'test_file.bin',
-);
-print('下载任务 ID: ${downloadTask.data?['id']}');
-
-// Example: Get download list
-final downloadList = await Appbridge().download.list();
-print('下载列表: $downloadList');
-
-// Example: Download M3U8 video (iOS/Android only)
-// await Appbridge().download.m3u8(url: 'https://example.com/playlist.m3u8', id: 'my_video');
-
-// Example: Get default download directory
-final defaultDir = await Appbridge().download.getDefaultDir();
-print('默认下载目录: $defaultDir');
-
-// Example: Set default download directory
-// await Appbridge().download.setDefaultDir(path: '/storage/emulated/0/Download/MyAppDownloads');
-
-// Example: Download and install APK (Android only)
-// final apkDownload = await Appbridge().download.downloadApk(url: 'https://example.com/app.apk', fileName: 'my_app.apk');
-// await Appbridge().download.installApk(path: apkDownload.data?['path']);
-```
-
-#### 应用商店模块 (AppStoreModule)
-
-```dart
-// Example: Open a specific app in the iOS App Store (iOS only)
-// await Appbridge().appstore.open(appId: 'YOUR_APP_ID');
-
-// Example: Search for apps in the iOS App Store (iOS only)
-// await Appbridge().appstore.search(query: 'Flutter');
-```
-
-#### 深层链接模块 (DeepLinkModule)
-
-```dart
-// Example: Open a deep link
-await Appbridge().deeplink.open(url: 'myapp://path/to/feature?param=value');
-
-// Example: Parse a deep link (usually handled at app startup)
-// final parsedLink = await Appbridge().deeplink.parse();
-// print('解析到的深层链接: ${parsedLink.data?['parsedLink']}');
-```
-
-#### 实时活动模块 (LiveActivityModule)
-
-```dart
-// Live Activity features are only available on iOS 16.1+ and require native implementation.
-// Currently, this module only returns errors or unimplemented prompts.
-// await Appbridge().liveActivity.start(activityId: 'myActivity', content: {'message': 'Starting...'});
-```
-
-#### TestFlight 模块 (TestFlightModule)
-
-```dart
-// Example: Open TestFlight invitation link (iOS only)
-// await Appbridge().testflight.open(url: 'https://testflight.apple.com/join/YOUR_INVITE_CODE');
-```
-
-#### 视频模块 (VideoModule)
-
-```dart
-// Example: Open video player
-// await Appbridge().video.open(url: 'https://example.com/my_video.mp4', title: '我的视频');
-```
-
-#### 小说模块 (NovelModule)
-
-```dart
-// Example: Open novel reader
-// await Appbridge().novel.open(id: 'novel_123', title: '我的小说');
-// await Appbridge().novel.open(url: 'https://example.com/novel/chapter1.html', title: '小说章节');
-```
-
-#### 漫画模块 (ComicsModule)
-
-```dart
-// Example: Open comic reader
-// await Appbridge().comics.open(id: 'comic_456', title: '我的漫画');
-// await Appbridge().comics.open(url: 'https://example.com/comics/page1.jpg', title: '漫画页面');
-```
-
-#### 直播模块 (LiveModule)
-
-```dart
-// Example: Simulate starting a live stream
-// await Appbridge().live.start(id: 'live_stream_789');
-
-// Example: Simulate playing a live stream
-// await Appbridge().live.play(id: 'live_stream_789');
-```
-
-#### 帖子模块 (PostModule)
-
-```dart
-// Example: Open post details page
-// await Appbridge().post.open(id: 'post_101', title: '我的帖子');
-// await Appbridge().post.open(url: 'https://example.com/posts/101', title: '帖子详情');
 ```
 
 ## 🤝 Contribution
@@ -731,10 +288,52 @@ We welcome contributions to `appbridge`! If you have bug reports, feature reques
 
 This project is licensed under the [MIT License] - see the [LICENSE](LICENSE) file for details.
 
-## ❓ Frequently Asked Questions (FAQ)
 
-[Add any frequently asked questions and their answers here.]
+## example 项目如何使用父 appbridge 插件功能的详细说明：
 
-## 📞 Support
+1. 初始化：
+* import 'package:appbridge/appbridge.dart'; 和 import
+  'package:appbridge/src/models/bridge_response.dart'; 用于导入 appbridge
+  插件的必要部分。
+* Appbridge? appbridgePlugin; 声明了一个 Appbridge 类的实例。
+* initState() 中的 appbridgePlugin = Appbridge(); 创建了插件实例。
+* onWebViewCreated 中的 await appbridgePlugin!.initialize(...)
+  是核心初始化步骤。它将 InAppWebViewController 和 BuildContext
+  以及各种回调传递给插件。
 
-If you encounter any issues or have questions, please submit an Issue on the [GitHub repository](https://github.com/bingbing01121-art/appbridge).
+2. 核心功能 - JavaScript 桥接：
+* appbridge 插件旨在促进 Flutter 和在 InAppWebView 中运行的 JavaScript 之间的通信。
+* onLoadStop 中的 appbridgePlugin!.injectJavaScript(); 和
+  _webViewController?.evaluateJavascript(source: 'flutterIsReady();'); 表明插件将其
+  JavaScript 接口注入到 WebView 中，并向 JavaScript 发出 Flutter 已准备就绪的信号。
+
+3. 事件发送和处理：
+* Flutter 到 JavaScript： 示例演示了 Flutter 如何向 JavaScript 发送事件。例如，在
+  _port.listen 回调（处理 flutter_downloader
+  事件）中，appbridgePlugin!.emitEvent(...) 用于向 JavaScript
+  端发送下载进度、完成或失败事件。
+* JavaScript 到 Flutter（通过回调）： appbridgePlugin 的 initialize
+  方法接受多个回调：
+    * onAddShortcut：处理来自 JavaScript
+      的添加快捷方式（例如，到主屏幕）的请求。它使用 MethodChannel
+      (_platformChannel) 与原生平台代码交互。
+    * onAppIcon：处理来自 JavaScript 的更改应用程序图标的请求，也使用
+      MethodChannel。
+    * onNavClose：处理来自 JavaScript 的关闭当前导航（例如，弹出当前屏幕）的请求。
+    * onNavSetTitle：根据 JavaScript 的请求更新 AppBar 标题。
+    * onNavReplace：处理来自 JavaScript 的导航替换请求。
+    * onNavSetBars：根据 JavaScript 请求控制 AppBar 的可见性。
+    * onLoadUrl：处理来自 JavaScript 的加载新 URL 的请求，可能使用
+      appbridgePlugin?.nav?.open 方法。
+4. 导航模块 (`nav`)：
+* onLoadUrl 中使用 appbridgePlugin?.nav?.open(...) 来打开一个新
+  URL，演示了插件公开的导航功能。
+
+5. UI 模块 (`ui`)：
+* onLoadUrl 中使用 appbridgePlugin?.ui?.toast(message: '加载URL: $url'); 来显示一个
+  toast 消息，演示了 UI 交互功能。
+
+6. 平台特定交互（通过 `MethodChannel`）：
+* 示例设置了一个 MethodChannel (_platformChannel) 来处理特定的原生功能，例如
+  addShortcuts 和 setAppIcon，然后通过 appbridge 插件的回调将这些功能暴露给
+  JavaScript 端。

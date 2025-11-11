@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:appbridge/appbridge.dart'; // Import Appbridge
 import 'dart:io'; // Add this import
-import 'package:flutter/foundation.dart'; // Import for kIsWeb
 import 'package:flutter/services.dart' show rootBundle; // Import rootBundle
 
 class NavWebViewScreen extends StatefulWidget {
@@ -60,6 +59,7 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
         body: InAppWebView(
           onWebViewCreated: (controller) async { // Make async to await rootBundle.loadString
             debugPrint('NavWebViewScreen: onWebViewCreated called for iOS.');
+            if (!mounted) return; // Moved here
             _webViewController = controller;
             _appbridgePlugin.registerWebViewController(_webViewController!);
 
@@ -80,10 +80,12 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
               context,
               onNavClose: () {
                 debugPrint('NavWebViewScreen NavCloseCallback: Triggered. Pop current route');
+                if (!mounted) return;
                 Navigator.of(context).pop();
               },
               onNavReplace: (url, title) {
                 debugPrint('NavWebViewScreen NavReplaceCallback: Triggered with url: $url, title: $title');
+                if (!mounted) return;
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
                     builder: (context) =>
@@ -92,11 +94,13 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
                 );
               },
               onNavSetTitle: (title) {
+                if (!mounted) return;
                 setState(() {
                   _currentTitle = title;
                 });
               },
               onLoadUrl: (url, title) async {
+                if (!mounted) return;
                 _appbridgePlugin.nav?.open(url: url, title: title);
                 _appbridgePlugin.ui?.toast(message: '加载URL: $url');
               },
@@ -104,15 +108,13 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
           },
           onLoadStop: (controller, url) async {
             debugPrint('NavWebViewScreen finished loading: $url');
-            if (url != null && widget.onPageLoaded != null) {
+            if (widget.onPageLoaded != null) {
               widget.onPageLoaded!(url.toString());
             }
-            if (_appbridgePlugin != null) {
-              await _appbridgePlugin.injectJavaScript();
-              _webViewController?.evaluateJavascript(
-                source: 'flutterIsReady();',
-              );
-            }
+            await _appbridgePlugin.injectJavaScript();
+            _webViewController?.evaluateJavascript(
+              source: 'flutterIsReady();',
+            );
           },
           onConsoleMessage: (controller, consoleMessage) {
             debugPrint('NavWebViewScreen Console Message: ${consoleMessage.message}');
@@ -139,15 +141,19 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
             _webViewController = controller;
             _appbridgePlugin.registerWebViewController(_webViewController!);
 
+            if (!mounted) return; // Add this line
+            // ignore: use_build_context_synchronously
             _appbridgePlugin.initialize(
               _webViewController!,
               context,
               onNavClose: () {
                 debugPrint('NavWebViewScreen NavCloseCallback: Triggered. Pop current route');
+                if (!mounted) return;
                 Navigator.of(context).pop();
               },
               onNavReplace: (url, title) {
                 debugPrint('NavWebViewScreen NavReplaceCallback: Triggered with url: $url, title: $title');
+                if (!mounted) return;
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
                     builder: (context) =>
@@ -156,11 +162,13 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
                 );
               },
               onNavSetTitle: (title) {
+                if (!mounted) return;
                 setState(() {
                   _currentTitle = title;
                 });
               },
               onLoadUrl: (url, title) async {
+                if (!mounted) return;
                 _appbridgePlugin.nav?.open(url: url, title: title);
                 _appbridgePlugin.ui?.toast(message: '加载URL: $url');
               },
@@ -168,15 +176,13 @@ class _NavWebViewScreenState extends State<NavWebViewScreen> {
           },
           onLoadStop: (controller, url) async {
             debugPrint('NavWebViewScreen finished loading: $url');
-            if (url != null && widget.onPageLoaded != null) {
+            if (widget.onPageLoaded != null) {
               widget.onPageLoaded!(url.toString());
             }
-            if (_appbridgePlugin != null) {
-              await _appbridgePlugin.injectJavaScript();
-              _webViewController?.evaluateJavascript(
-                source: 'flutterIsReady();',
-              );
-            }
+            await _appbridgePlugin.injectJavaScript();
+            _webViewController?.evaluateJavascript(
+              source: 'flutterIsReady();',
+            );
           },
           onConsoleMessage: (controller, consoleMessage) {
             debugPrint('NavWebViewScreen Console Message: ${consoleMessage.message}');

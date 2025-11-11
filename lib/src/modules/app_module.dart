@@ -207,9 +207,11 @@ class _SimulatedUpdateDialogContentState
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(widget.rootContext).showSnackBar(
-                const SnackBar(content: Text('更新成功！')),
-              );
+              if (widget.rootContext.mounted) { // Add mounted check for rootContext
+                ScaffoldMessenger.of(widget.rootContext).showSnackBar(
+                  const SnackBar(content: Text('更新成功！')),
+                );
+              } // Added missing closing brace
             }
           });
         }

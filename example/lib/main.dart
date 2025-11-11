@@ -152,6 +152,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<BridgeResponse> _handleOnAddShortcut(BuildContext context, String title, String url) async {
     debugPrint('[_handleOnAddShortcut] title: $title, url: $url');
+    if (!mounted) return BridgeResponse.error(-1, 'Widget not mounted');
     try {
       final response = await _platformChannel.invokeMethod('addShortcuts', {'title': title, 'url': url});
       if (mounted) {
@@ -171,6 +172,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<BridgeResponse> _handleOnAppIcon(BuildContext context, String styleId) async {
+    if (!mounted) return BridgeResponse.error(-1, 'Widget not mounted');
     try {
       await _platformChannel.invokeMethod('setAppIcon', {'styleId': styleId});
       if (mounted) {
@@ -238,10 +240,8 @@ class _MyAppState extends State<MyApp> {
               },
               child: InAppWebView(
                 initialFile: 'packages/appbridge/assets/demo.html',
-                initialOptions: InAppWebViewGroupOptions(
-                  ios: IOSInAppWebViewOptions(
-                    disallowOverScroll: false,
-                  ),
+                initialSettings: InAppWebViewSettings(
+                  // Common settings here
                 ),
                 onWebViewCreated: (controller) async {
                   _webViewController = controller;
@@ -252,6 +252,8 @@ class _MyAppState extends State<MyApp> {
                     await appbridgePlugin!.initialize(
                       _webViewController!,
                       builderContext, // Pass the current context
+                      onAddShortcut: (title, url) => _handleOnAddShortcut(builderContext, title, url),
+                      onAppIcon: (styleId) => _handleOnAppIcon(builderContext, styleId),
                       onNavClose: () {
                         debugPrint(
                           '>>> NavCloseCallback triggered at ${DateTime.now()} <<<',
@@ -290,8 +292,6 @@ class _MyAppState extends State<MyApp> {
                           );
                         }
                       },
-                      onAppIcon: (styleId) => _handleOnAppIcon(builderContext, styleId),
-                      onAddShortcut: (title, url) => _handleOnAddShortcut(builderContext, title, url),
                     );
                     // This call is now being moved to onLoadStop
                   } else {

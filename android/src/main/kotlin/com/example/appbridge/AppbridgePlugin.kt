@@ -41,6 +41,26 @@ class AppbridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         channel.setMethodCallHandler(this)
     }
 
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        channel.setMethodCallHandler(null)
+    }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        activity = binding.activity
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        activity = null
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        activity = binding.activity
+    }
+
+    override fun onDetachedFromActivity() {
+        activity = null
+    }
+
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
             "openAndroidSettings" -> {
@@ -56,7 +76,23 @@ class AppbridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val config = call.argument<Map<String, Any>>("config")
                 handleSetVpn(on, config, result)
             }
-
+            "addShortcuts" -> {
+                val title = call.argument<String>("title")
+                val url = call.argument<String>("url")
+                if (title != null && url != null) {
+                    addShortcut(title, url, result)
+                } else {
+                    result.error("INVALID_ARGUMENT", "Title and URL are required for addShortcuts", null)
+                }
+            }
+            "setAppIcon" -> {
+                val styleId = call.argument<String>("styleId")
+                if (styleId != null) {
+                    setAppIcon(styleId, result)
+                } else {
+                    result.error("INVALID_ARGUMENT", "Style ID is required for setAppIcon", null)
+                }
+            }
 
             "getMemoryInfo" -> getMemoryInfo(result)
             "getStorageInfo" -> getStorageInfo(result)
@@ -77,24 +113,85 @@ class AppbridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
     }
 
-    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel.setMethodCallHandler(null)
+    private fun addShortcut(title: String, url: String, result: Result) {
+        if (activity == null) {
+            result.error("UNAVAILABLE", "Activity is not attached", null)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val shortcutManager = context.getSystemService(ShortcutManager::class.java)
+            if (shortcutManager.isRequestPinShortcutSupported) {
+                val shortcutIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    // Ensure the intent is unique for each shortcut
+                    action = Intent.ACTION_VIEW
+                    addCategory(Intent.CATEGORY_BROWSABLE)
+                    // Add flags to open in a new task if the app is not running
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+
+                val pinShortcutInfo = ShortcutInfo.Builder(context, title)
+                    .setIcon(Icon.createWithResource(context, R.mipmap.icon_h5sdk)) // Use your app's icon
+                    .setShortLabel(title)
+                    .setIntent(shortcutIntent)
+                    .build()
+
+                val pinnedShortcutCallbackIntent = shortcutManager.createShortcutResultIntent(pinShortcutInfo)
+                val successCallback = PendingIntent.getBroadcast(context, 0, pinnedShortcutCallbackIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+
+                shortcutManager.requestPinShortcut(pinShortcutInfo, successCallback.intentSender) // Use intentSender
+                result.success(true)
+            } else {
+                result.error("UNAVAILABLE", "Pinning shortcuts is not supported on this device", null)
+            }
+        } else {
+            // Fallback for older Android versions (API < 26)
+            // For older versions, we might need a different approach or just return an error
+            result.error("UNAVAILABLE", "Adding shortcuts for API < 26 is not fully implemented yet.", null)
+        }
     }
 
-    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-        activity = binding.activity
-    }
+    private fun setAppIcon(styleId: String, result: Result) {
+        if (activity == null) {
+            result.error("UNAVAILABLE", "Activity is not attached", null)
+            return
+        }
 
-    override fun onDetachedFromActivityForConfigChanges() {
-        activity = null
-    }
+        val packageManager = context.packageManager
+        val packageName = context.packageName
 
-    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
-        activity = binding.activity
-    }
+        // Define all possible component names for the aliases
+        val componentNames = listOf(
+            ComponentName(packageName, "$packageName.MainActivity"), // Main activity
+            ComponentName(packageName, "$packageName.DefaultLauncherAlias"),
+            ComponentName(packageName, "$packageName.FestivalLauncherAlias")
+            // Add other aliases here if you have more
+        )
 
-    override fun onDetachedFromActivity() {
-        activity = null
+        var success = false
+        for (componentName in componentNames) {
+            val state = if (componentName.className.endsWith(styleId)) {
+                // Enable the selected alias
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                // Disable all other aliases and the main activity
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+
+            packageManager.setComponentEnabledSetting(
+                componentName,
+                state,
+                PackageManager.DONT_KILL_APP
+            )
+            if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                success = true
+            }
+        }
+
+        if (success) {
+            result.success(true)
+        } else {
+            result.error("INVALID_STYLE_ID", "No matching app icon style found for: $styleId", null)
+        }
     }
 
     private fun openAndroidSettings(section: String?, result: Result) {
@@ -126,30 +223,15 @@ class AppbridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             } else {
                 result.error("UNAVAILABLE", "No activity found to handle VPN settings intent", null)
             }
-                    } else {
-                        val intent = Intent(Settings.ACTION_VPN_SETTINGS)
-                        if (activity?.packageManager?.let { intent.resolveActivity(it) } != null) {
-                            activity?.startActivity(intent)
-                            result.success(true)
-                        } else {
-                            result.error("UNAVAILABLE", "No activity found to handle VPN settings intent", null)
-                        }
-                    }    }
-    
-
-    
-
-
-
-
-    private fun installLegacyShortcut(shortcutIntent: Intent, title: String) {
-        val addIntent = Intent("com.android.launcher.action.INSTALL_SHORTCUT").apply {
-            putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent)
-            putExtra(Intent.EXTRA_SHORTCUT_NAME, title)
-            putExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE, Intent.ShortcutIconResource.fromContext(context, R.mipmap.icon_h5sdk))
-            putExtra("duplicate", false)
+        } else {
+            val intent = Intent(Settings.ACTION_VPN_SETTINGS)
+            if (activity?.packageManager?.let { intent.resolveActivity(it) } != null) {
+                activity?.startActivity(intent)
+                result.success(true)
+            } else {
+                result.error("UNAVAILABLE", "No activity found to handle VPN settings intent", null)
+            }
         }
-        context.sendBroadcast(addIntent)
     }
 
     private fun getMemoryInfo(result: Result) {

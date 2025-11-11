@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hls_parser/flutter_hls_parser.dart';
-import 'dart:convert';
 
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart'; // Add dio
 
-import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:flutter/foundation.dart';
 import '../models/bridge_response.dart';
 import 'base_module.dart';
 

@@ -981,7 +981,7 @@
         async function testFlightOpen(){ const el=document.getElementById('iosResult'); try{ const r=await (AppBridge.testflight?.open?AppBridge.testflight.open({ inviteUrl:'https://testflight.apple.com/join/xxxx' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
 
         // 15. DeepLink
-        async function deeplinkOpen(){ const el=document.getElementById('deeplinkResult'); try{ const r=await (AppBridge.deeplink?.open?AppBridge.deeplink.open({ url:'googlechrome://navigate?url=https://developer.chrome.com/?hl=zh-cn' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
+        async function deeplinkOpen(){ const el=document.getElementById('deeplinkResult'); try{ const r=await (AppBridge.deeplink?.open?AppBridge.deeplink.open({ url:'https://www.google.com' }):{code:0,data:true}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
         async function deeplinkParse(){ const el=document.getElementById('deeplinkResult'); try{ const r=await (AppBridge.deeplink?.parse?AppBridge.deeplink.parse({ url:'googlechrome://navigate?url=https://developer.chrome.com/?hl=zh-cn' }):{code:0,data:{}}); el.innerHTML=JSON.stringify(r,null,2); el.className='result success'; }catch(e){ el.innerHTML=`错误: ${e.msg || e.message || JSON.stringify(e)}`; el.className='result error'; } }
 
         // 16. LiveActivity

@@ -7,14 +7,14 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import 'package:flutter_pinned_shortcut_plus/flutter_pinned_shortcut_plus.dart';
-
 import '../models/bridge_response.dart';
 import '../models/environment_info.dart';
 import '../models/version_info.dart';
-import 'package:quick_actions/quick_actions.dart';
 import 'base_module.dart';
-import 'package:appbridge/appbridge.dart'; // Re-add Appbridge import
+
+typedef Future<BridgeResponse> OnAddShortcutCallback(String title, String url);
+typedef Future<BridgeResponse> OnAppIconCallback(String styleId);
+
 
 /// Core模块实现
 class CoreModule extends BaseModule {
@@ -272,100 +272,6 @@ class CoreModule extends BaseModule {
         errorCode,
         e.message ?? 'Unknown PlatformException',
       );
-    } catch (e) {
-      return BridgeResponse.error(-1, e.toString());
-    }
-  }
-
-  /// 添加快捷方式
-  Future<BridgeResponse> _addShortcuts(Map<String, dynamic> params) async {
-    if (Platform.isAndroid) {
-      return await _addPinnedShortcut(params);
-    } else if (Platform.isIOS) {
-      return await _addQuickAction(params);
-    } else {
-      return BridgeResponse.error(-1, 'Unsupported platform');
-    }
-  }
-
-  /// 添加桌面快捷方式 (Android only)
-  Future<BridgeResponse> _addPinnedShortcut(Map<String, dynamic> params) async {
-    try {
-      final title = params['title'] as String? ?? 'Shortcut';
-      final url = params['url'] as String? ?? '';
-
-      if (url.isEmpty) {
-        return BridgeResponse.error(-1, 'URL is required for a shortcut');
-      }
-
-      await FlutterPinnedShortcut().createPinnedShortcut(
-        id: url,
-        label: title,
-        action: url, // Add action parameter
-        iconAssetName: 'assets/icon_h5sdk_new.png', // Placeholder icon
-      );
-
-      return BridgeResponse.success(true);
-    } catch (e) {
-      debugPrint(e.toString());
-      return BridgeResponse.error(
-        -1,
-        'Failed to add pinned shortcut: ${e.toString()}',
-      );
-    }
-  }
-
-  /// 添加应用内快捷方式 (iOS)
-  Future<BridgeResponse> _addQuickAction(Map<String, dynamic> params) async {
-    try {
-      const quickActions = QuickActions();
-      final title = params['title'] as String? ?? 'Shortcut';
-      final url = params['url'] as String? ?? '';
-
-      if (url.isEmpty) {
-        return BridgeResponse.error(-1, 'URL is required for a shortcut');
-      }
-
-      await quickActions.setShortcutItems([
-        ShortcutItem(
-          type: url, // Use the URL as the unique identifier
-          localizedTitle: '$title快捷方式',
-          icon: 'ic_launcher', // Placeholder icon, user needs to add a real one
-        ),
-      ]);
-
-      return BridgeResponse.success(true);
-    } catch (e) {
-      debugPrint(e.toString());
-      return BridgeResponse.error(
-        -1,
-        'Failed to add shortcut: ${e.toString()}',
-      );
-    }
-  }
-
-  /// 切换应用图标
-  Future<BridgeResponse> _appIcon(Map<String, dynamic> params) async {
-    debugPrint("AAAAAA切换应用图标--_appIcon");
-    try {
-      final styleId = params['styleId'] as String?;
-      if (styleId == null) {
-        return BridgeResponse.error(-1, 'styleId is required for appIcon');
-      }
-      final result = await _platform.invokeMethod('appIcon', {
-        'styleId': styleId,
-      });
-      return BridgeResponse.success(result);
-    } on PlatformException catch (e) {
-      int errorCode = -1;
-      try {
-        errorCode = int.parse(e.code);
-      } catch (_) {
-        // If e.code is not a valid integer, use -1
-        errorCode = -1;
-      }
-      return BridgeResponse.error(
-          errorCode, e.message ?? 'Unknown PlatformException');
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }

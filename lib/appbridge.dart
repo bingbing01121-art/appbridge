@@ -199,6 +199,7 @@ class Appbridge {
     debugPrint(
         'Appbridge: initialize called with webViewController: $webViewController, context: $context');
     registerWebViewController(webViewController);
+    if (!context.mounted) return; // Add mounted check
     _mainContext ??= context;
 
     // Create and push a new callback handler for the current context
@@ -209,10 +210,11 @@ class Appbridge {
       onNavSetBars: onNavSetBars,
       onNavReplace: onNavReplace,
       onLoadUrl: onLoadUrl,
+      onAddShortcut: onAddShortcut,
+      onAppIcon: onAppIcon,
       context: context, // Pass context to callback handler
     );
     _callbackStack.add(callbackHandler);
-    debugPrint('Appbridge: initialize - onAddShortcut passed: ${onAddShortcut != null}, onAppIcon passed: ${onAppIcon != null}');
     debugPrint('Appbridge: _callbackStack after add: ${_callbackStack.length} elements.');
 
     // Update CoreModule with the new callbacks
