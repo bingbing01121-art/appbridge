@@ -25,7 +25,7 @@ packages:
     source: hosted
     version: "2.13.0"
   battery_plus:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: battery_plus
       sha256: ad16fcb55b7384be6b4bbc763d5e2031ac7ea62b2d9b6b661490c7b9741155bf
@@ -49,7 +49,7 @@ packages:
     source: hosted
     version: "2.1.2"
   cached_network_image:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: cached_network_image
       sha256: "7c1183e361e5c8b0a0f21a28401eecdbde252441106a9816400dd4c2b2424916"
@@ -228,10 +228,10 @@ packages:
     dependency: transitive
     description:
       name: file_selector_platform_interface
-      sha256: a3994c26f10378a039faa11de174d7b78eb8f79e4dd0af2a451410c1a5c3f66b
+      sha256: "35e0bd61ebcdb91a3505813b055b09b79dfdc7d0aee9c09a7ba59ae4bb13dc85"
       url: "https://pub.dev"
     source: hosted
-    version: "2.6.2"
+    version: "2.7.0"
   file_selector_windows:
     dependency: transitive
     description:
@@ -275,7 +275,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_hls_parser:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_hls_parser
       sha256: f4b7df4f927623aea5c72006232693e07fdd11438f600c08670d6a23c1aa85c8
@@ -355,7 +355,7 @@ packages:
     source: hosted
     version: "5.0.0"
   flutter_local_notifications:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_local_notifications
       sha256: "19ffb0a8bb7407875555e5e98d7343a633bb73707bae6c6a5f37c90014077875"
@@ -413,7 +413,7 @@ packages:
     source: sdk
     version: "0.0.0"
   fluttertoast:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: fluttertoast
       sha256: "144ddd74d49c865eba47abe31cbc746c7b311c82d6c32e571fd73c4264b740e2"
@@ -426,7 +426,7 @@ packages:
     source: sdk
     version: "0.0.0"
   gallery_saver_plus:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: gallery_saver_plus
       sha256: fd4a50eb7b90b1dd8d926ab34dc62abd428feb72f780d4aaf17dcaae12f6743f
@@ -434,7 +434,7 @@ packages:
     source: hosted
     version: "3.2.9"
   get:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: get
       sha256: c79eeb4339f1f3deffd9ec912f8a923834bec55f7b49c9e882b8fef2c139d425
@@ -453,10 +453,10 @@ packages:
     dependency: transitive
     description:
       name: http
-      sha256: bb2ce4590bc2667c96f318d68cac1b5a7987ec819351d32b1c987239a815e007
+      sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.0"
+    version: "1.6.0"
   http_parser:
     dependency: transitive
     description:
@@ -466,7 +466,7 @@ packages:
     source: hosted
     version: "4.1.2"
   image_gallery_saver:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: image_gallery_saver
       sha256: "0aba74216a4d9b0561510cb968015d56b701ba1bd94aace26aacdd8ae5761816"
@@ -474,7 +474,7 @@ packages:
     source: hosted
     version: "2.0.3"
   image_picker:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: image_picker
       sha256: "736eb56a911cf24d1859315ad09ddec0b66104bc41a7f8c5b96b4e2620cf5041"
@@ -538,7 +538,7 @@ packages:
     source: hosted
     version: "0.2.2"
   in_app_update:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: in_app_update
       sha256: "9924a3efe592e1c0ec89dda3683b3cfec3d4cd02d908e6de00c24b759038ddb1"
@@ -831,7 +831,7 @@ packages:
     source: hosted
     version: "0.28.0"
   screen_brightness:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: screen_brightness
       sha256: "5f70754028f169f059fdc61112a19dcbee152f8b293c42c848317854d650cba3"
@@ -887,7 +887,7 @@ packages:
     source: hosted
     version: "2.1.0"
   share_plus:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: share_plus
       sha256: "14c8860d4de93d3a7e53af51bff479598c4e999605290756bbbe45cf65b37840"
@@ -1172,7 +1172,7 @@ packages:
     source: hosted
     version: "2.1.4"
   video_player:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: video_player
       sha256: "0d55b1f1a31e5ad4c4967bfaa8ade0240b07d20ee4af1dfef5f531056512961a"
@@ -1220,7 +1220,7 @@ packages:
     source: hosted
     version: "15.0.0"
   volume_controller:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: volume_controller
       sha256: d75039e69c0d90e7810bfd47e3eedf29ff8543ea7a10392792e81f9bded7edf5

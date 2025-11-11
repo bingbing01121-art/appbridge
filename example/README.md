@@ -15,3 +15,8 @@ For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 # appbridge
+
+
+[//]: # ( adb shell am start -W -a android.intent.action.VIEW -d)
+
+[//]: # ("appbridge-example://host/path?param=value" com.example.appbridge_example)

@@ -94,7 +94,7 @@
 
 ### 15. deeplink
 
-- **deeplink.open/parse**：深链（打开第三方 App 内页面或本 App 内部页面）。  。  
+- **deeplink.open/parse**：深链（打开第三方 App 内页面或本 App 内部页面）。
 
 ### 16. liveActivity
 
