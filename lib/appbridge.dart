@@ -721,11 +721,18 @@ class Appbridge {
           'Appbridge: No active WebViewController, cannot send response for messageId: $messageId');
       return;
     }
+
+    final responsePayload = {
+      'type': 'bridge_response',
+      'messageId': messageId,
+      'response': response.toJson(),
+    };
+
     await controller.evaluateJavascript(
       // Use controller
       source: '''
       window.dispatchEvent(new MessageEvent('message', {
-        data: ${jsonEncode(response.toJson())}
+        data: ${jsonEncode(responsePayload)}
       }));
     ''',
     );
