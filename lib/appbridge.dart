@@ -781,3 +781,4 @@ class Appbridge {
   Future<String?> getPlatformVersion() {
     return AppbridgePlatform.instance.getPlatformVersion();
   }
+}
