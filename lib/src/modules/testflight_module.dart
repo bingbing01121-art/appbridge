@@ -14,6 +14,21 @@ class TestFlightModule extends BaseModule {
     _uiModule = uiModule;
   }
 
+  Future<BridgeResponse> _open(Map<String, dynamic> params) async {
+    final url = params['url'] as String?;
+    if (url == null || url.isEmpty) {
+      return BridgeResponse.error(-1, 'URL is required to open TestFlight.');
+    }
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+      return BridgeResponse.success(true);
+    } else {
+      return BridgeResponse.error(-1, 'Could not launch TestFlight URL: $url');
+    }
+  }
+
   @override
   Future<BridgeResponse> handleMethod(
       String action, Map<String, dynamic> params,
@@ -33,22 +48,10 @@ class TestFlightModule extends BaseModule {
     }
   }
 
-  Future<BridgeResponse> _open(Map<String, dynamic> params) async {
-    final urlString = params['url'] as String?;
-    if (urlString == null) {
-      _uiModule?.toast(
-          message: 'textURL is required for TestFlight open.'); // Add toast
-      return BridgeResponse.error(-1, 'url is required');
-    }
-
-    final url = Uri.parse(urlString);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-      return BridgeResponse.success(null);
-    } else {
-      _uiModule?.toast(
-          message: 'textCould not launch $urlString.'); // Add toast
-      return BridgeResponse.error(-1, 'Could not launch $url');
-    }
+  @override
+  List<String> getCapabilities() {
+    return [
+      'testflight.open',
+    ];
   }
 }

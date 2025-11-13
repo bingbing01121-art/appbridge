@@ -7,4 +7,6 @@ abstract class BaseModule {
   Future<BridgeResponse> handleMethod(
       String action, Map<String, dynamic> params,
       [BuildContext? context]);
+
+  List<String> getCapabilities();
 }

@@ -241,7 +241,19 @@ class _MyAppState extends State<MyApp> {
               child: InAppWebView(
                 initialFile: 'packages/appbridge/assets/demo.html',
                 initialSettings: InAppWebViewSettings(
-                  // Common settings here
+                  // Common settings
+                  javaScriptCanOpenWindowsAutomatically: true,
+                  javaScriptEnabled: true,
+                  domStorageEnabled: true,
+                  databaseEnabled: true,
+                  // iOS-specific optimizations
+                  allowsLinkPreview: false,
+                  // suppressesIncrementalRendering: true, // May improve initial load, but causes issues on some iOS versions
+                  limitsNavigationsToAppBoundDomains: true,
+                  directionality: WebViewDirectionality.ltr, // Explicitly set directionality
+                  // Navigation control
+                  useOnNavigationResponse: true,
+                  useShouldOverrideUrlLoading: true,
                 ),
                 onWebViewCreated: (controller) async {
                   _webViewController = controller;
@@ -279,16 +291,12 @@ class _MyAppState extends State<MyApp> {
                       },
                       onLoadUrl: (url, title) async {
                         if (_webViewController != null) {
-                          if (appbridgePlugin != null) {
-                            appbridgePlugin?.nav?.open(
-                              url: url,
-                              title: title,
-                            ); // Pass the title
-                            appbridgePlugin?.ui?.toast(message: '加载URL: $url');
-                          }
+                          debugPrint('Loading URL directly in WebView: $url');
+                          await _webViewController!.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+                          appbridgePlugin?.ui?.toast(message: '加载URL: $url');
                         } else {
                           debugPrint(
-                            'Error: _webViewController is null when trying to load URL via loadUrl',
+                            'Error: _webViewController is null when trying to load URL via onLoadUrl',
                           );
                         }
                       },

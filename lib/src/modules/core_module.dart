@@ -7,6 +7,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../appbridge.dart';
 import '../models/bridge_response.dart';
 import '../models/environment_info.dart';
 import '../models/version_info.dart';
@@ -216,30 +217,24 @@ class CoreModule extends BaseModule {
     return BridgeResponse.success(availableMethods.contains(path));
   }
 
-  /// 获取可用方法列表
-  Future<BridgeResponse> _getCapabilities() async {
-    debugPrint("_getCapabilities--进入方法列表");
-    final capabilities = [
+  @override
+  List<String> getCapabilities() {
+    return [
       'core.getVersion',
       'core.getEnv',
       'core.ready',
       'core.has',
       'core.getCapabilities',
-      'events.on',
-      'events.once',
-      'events.emit',
-      'app.getStatus',
-      'ui.toast',
-      'ui.alert',
-      'ui.confirm',
-      'storage.get',
-      'storage.set',
-      'device.getInfo',
-      'permission.check',
-      'permission.request',
+      'core.setVpn',
+      'core.addShortcuts',
+      'core.appIcon',
     ];
+  }
 
-    return BridgeResponse.success(capabilities);
+  /// 获取可用方法列表
+  Future<BridgeResponse> _getCapabilities() async {
+    debugPrint("_getCapabilities--进入方法列表");
+    return BridgeResponse.success(Appbridge().capabilitiesRegistry.toList());
   }
 
   /// 设置VPN

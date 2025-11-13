@@ -68,31 +68,7 @@ class Appbridge {
   Appbridge._internal() {
     debugPrint('Appbridge: _internal constructor called, creating singleton instance.');
     _appMethodChannel = const MethodChannel('com.example.appbridge_h5/app');
-    _coreModule = CoreModule(_appMethodChannel!);
-    _storageModule = StorageModule();
-    _deviceModule = DeviceModule(_appMethodChannel!);
-    _shareModule = ShareModule();
-    _notificationsModule = NotificationsModule(emitEvent);
-    _authModule = AuthModule();
-    _downloadModule = DownloadModule(_appMethodChannel!, emitEvent);
-
-    _eventsModule = EventsModule(null); // Initialize with null, will be updated
-    _appModule = AppModule(_appMethodChannel!); // Context will be updated
-    _navModule = NavModule(); // Context will be updated
-    _uiModule = UIModule(); // Context will be updated
-    _permissionModule = PermissionModule(); // Context will be updated
-    _paymentModule = PaymentModule(); // Context will be updated
-    _appStoreModule = AppStoreModule(_uiModule); // Context will be updated
-    _deepLinkModule = DeepLinkModule(_uiModule); // Context will be updated
-    _testFlightModule =
-        TestFlightModule(_uiModule); // Initialize with null, will be updated
-    _videoModule = VideoModule(); // Context will be updated
-    _novelModule = NovelModule(); // Context will be updated
-    _comicsModule = ComicsModule(); // Context will be updated
-    _liveModule = LiveModule(emitEvent); // Context will be updated
-    _postModule = PostModule(); // Context will be updated
-    _liveActivityModule =
-        LiveActivityModule(_uiModule); // Initialize with null, will be updated
+    // Capabilities will be registered when modules are lazily initialized
   }
 
   InAppWebViewController? _webViewController;
@@ -120,7 +96,7 @@ class Appbridge {
       debugPrint(
           'Appbridge: Registered new WebViewController. Total active: ${_activeWebViewControllers.length}, current: $_webViewController');
       // New: Update modules that need the webViewController
-      _eventsModule?.updateWebViewController(controller);
+      _eventsModuleInstance.updateWebViewController(controller);
       // Add JavaScript handler here, as it's the first time this controller is registered
       controller.addJavaScriptHandler(
         handlerName: 'AppBridge',
@@ -148,10 +124,17 @@ class Appbridge {
         'Appbridge: Unregistered WebViewController. Total active: ${_activeWebViewControllers.length}, current: $_webViewController');
   }
 
+  final Set<String> _capabilitiesRegistry = {};
+
+  void _registerCapability(String capability) {
+    _capabilitiesRegistry.add(capability);
+  }
+
+  Set<String> get capabilitiesRegistry => _capabilitiesRegistry;
+
   MethodChannel? _appMethodChannel;
 
-  MethodChannel? get methodChannel => _appMethodChannel;
-
+  // Nullable module fields
   CoreModule? _coreModule;
   EventsModule? _eventsModule;
   AppModule? _appModule;
@@ -175,11 +158,165 @@ class Appbridge {
   LiveModule? _liveModule;
   PostModule? _postModule;
 
-  UIModule? get ui => _uiModule;
-  NavModule? get nav => _navModule;
+  // Lazy getters for each module
+  CoreModule get _coreModuleInstance {
+    _coreModule ??= CoreModule(_appMethodChannel!);
+    _coreModule!.getCapabilities().forEach(_registerCapability);
+    return _coreModule!;
+  }
+
+  EventsModule get _eventsModuleInstance {
+    _eventsModule ??= EventsModule(_webViewController);
+    _eventsModule!.getCapabilities().forEach(_registerCapability);
+    return _eventsModule!;
+  }
+
+  AppModule get _appModuleInstance {
+    _appModule ??= AppModule(_appMethodChannel!);
+    _appModule!.getCapabilities().forEach(_registerCapability);
+    return _appModule!;
+  }
+
+  NavModule get _navModuleInstance {
+    _navModule ??= NavModule();
+    _navModule!.getCapabilities().forEach(_registerCapability);
+    return _navModule!;
+  }
+
+  UIModule get _uiModuleInstance {
+    _uiModule ??= UIModule();
+    _uiModule!.getCapabilities().forEach(_registerCapability);
+    return _uiModule!;
+  }
+
+  StorageModule get _storageModuleInstance {
+    _storageModule ??= StorageModule();
+    _storageModule!.getCapabilities().forEach(_registerCapability);
+    return _storageModule!;
+  }
+
+  PermissionModule get _permissionModuleInstance {
+    _permissionModule ??= PermissionModule();
+    _permissionModule!.getCapabilities().forEach(_registerCapability);
+    return _permissionModule!;
+  }
+
+  DeviceModule get _deviceModuleInstance {
+    _deviceModule ??= DeviceModule(_appMethodChannel!);
+    _deviceModule!.getCapabilities().forEach(_registerCapability);
+    return _deviceModule!;
+  }
+
+  ShareModule get _shareModuleInstance {
+    _shareModule ??= ShareModule();
+    _shareModule!.getCapabilities().forEach(_registerCapability);
+    return _shareModule!;
+  }
+
+  NotificationsModule get _notificationsModuleInstance {
+    _notificationsModule ??= NotificationsModule(emitEvent);
+    _notificationsModule!.getCapabilities().forEach(_registerCapability);
+    return _notificationsModule!;
+  }
+
+  AuthModule get _authModuleInstance {
+    _authModule ??= AuthModule();
+    _authModule!.getCapabilities().forEach(_registerCapability);
+    return _authModule!;
+  }
+
+  PaymentModule get _paymentModuleInstance {
+    _paymentModule ??= PaymentModule();
+    _paymentModule!.getCapabilities().forEach(_registerCapability);
+    return _paymentModule!;
+  }
+
+  DownloadModule get _downloadModuleInstance {
+    _downloadModule ??= DownloadModule(_appMethodChannel!, emitEvent);
+    _downloadModule!.getCapabilities().forEach(_registerCapability);
+    return _downloadModule!;
+  }
+
+  AppStoreModule get _appStoreModuleInstance {
+    _appStoreModule ??= AppStoreModule(_uiModuleInstance);
+    _appStoreModule!.getCapabilities().forEach(_registerCapability);
+    return _appStoreModule!;
+  }
+
+  DeepLinkModule get _deepLinkModuleInstance {
+    _deepLinkModule ??= DeepLinkModule(_uiModuleInstance);
+    _deepLinkModule!.getCapabilities().forEach(_registerCapability);
+    return _deepLinkModule!;
+  }
+
+  LiveActivityModule get _liveActivityModuleInstance {
+    _liveActivityModule ??= LiveActivityModule(_uiModuleInstance);
+    _liveActivityModule!.getCapabilities().forEach(_registerCapability);
+    return _liveActivityModule!;
+  }
+
+  TestFlightModule get _testFlightModuleInstance {
+    _testFlightModule ??= TestFlightModule(_uiModuleInstance);
+    _testFlightModule!.getCapabilities().forEach(_registerCapability);
+    return _testFlightModule!;
+  }
+
+  VideoModule get _videoModuleInstance {
+    _videoModule ??= VideoModule();
+    _videoModule!.getCapabilities().forEach(_registerCapability);
+    return _videoModule!;
+  }
+
+  NovelModule get _novelModuleInstance {
+    _novelModule ??= NovelModule();
+    _novelModule!.getCapabilities().forEach(_registerCapability);
+    return _novelModule!;
+  }
+
+  ComicsModule get _comicsModuleInstance {
+    _comicsModule ??= ComicsModule();
+    _comicsModule!.getCapabilities().forEach(_registerCapability);
+    return _comicsModule!;
+  }
+
+  LiveModule get _liveModuleInstance {
+    _liveModule ??= LiveModule(emitEvent);
+    _liveModule!.getCapabilities().forEach(_registerCapability);
+    return _liveModule!;
+  }
+
+  PostModule get _postModuleInstance {
+    _postModule ??= PostModule();
+    _postModule!.getCapabilities().forEach(_registerCapability);
+    return _postModule!;
+  }
+
+  // Public getters for modules
+  UIModule get ui => _uiModuleInstance;
+  NavModule get nav => _navModuleInstance;
+  CoreModule get core => _coreModuleInstance;
+  EventsModule get events => _eventsModuleInstance;
+  AppModule get app => _appModuleInstance;
+  StorageModule get storage => _storageModuleInstance;
+  PermissionModule get permission => _permissionModuleInstance;
+  DeviceModule get device => _deviceModuleInstance;
+  ShareModule get share => _shareModuleInstance;
+  NotificationsModule get notifications => _notificationsModuleInstance;
+  AuthModule get auth => _authModuleInstance;
+  PaymentModule get payment => _paymentModuleInstance;
+  DownloadModule get download => _downloadModuleInstance;
+  AppStoreModule get appstore => _appStoreModuleInstance;
+  DeepLinkModule get deeplink => _deepLinkModuleInstance;
+  LiveActivityModule get liveActivity => _liveActivityModuleInstance;
+  TestFlightModule get testflight => _testFlightModuleInstance;
+  VideoModule get video => _videoModuleInstance;
+  NovelModule get novel => _novelModuleInstance;
+  ComicsModule get comics => _comicsModuleInstance;
+  LiveModule get live => _liveModuleInstance;
+  PostModule get post => _postModuleInstance;
 
   Future<BridgeResponse> appIcon({required String styleId}) async {
-    return await _coreModule?.handleMethod('appIcon', {'styleId': styleId}) ??
+    return await _coreModuleInstance.handleMethod('appIcon', {'styleId': styleId}) ??
         BridgeResponse.error(-1, 'CoreModule not initialized');
   }
 
@@ -218,55 +355,38 @@ class Appbridge {
     debugPrint('Appbridge: _callbackStack after add: ${_callbackStack.length} elements.');
 
     // Update CoreModule with the new callbacks
-    _coreModule?.updateCallbacks(
+    _coreModuleInstance.updateCallbacks(
       onAddShortcut: onAddShortcut,
       onAppIcon: onAppIcon,
     );
 
     debugPrint('Appbridge: Context added to stack for: $context');
 
-    // Modules will now get context from Appbridge().context, so no need to update here.
-    // _uiModule?.updateContext(context);
-    // _permissionModule?.updateContext(context);
-    // _deepLinkModule?.updateContext(context);
-    // _liveModule?.updateContext(context);
-    // _videoModule?.updateContext(context);
-    // _novelModule?.updateContext(context);
-    // _comicsModule?.updateContext(context);
-    // _postModule?.updateContext(context);
-
     // Update UIModule for modules that need it
-    _appStoreModule?.updateUIModule(_uiModule!);
-    _deepLinkModule?.updateUIModule(_uiModule!);
-    _liveActivityModule?.updateUIModule(_uiModule!);
-    _testFlightModule?.updateUIModule(_uiModule!);
+    _appStoreModuleInstance.updateUIModule(_uiModuleInstance);
+    _deepLinkModuleInstance.updateUIModule(_uiModuleInstance);
+    _liveActivityModuleInstance.updateUIModule(_uiModuleInstance);
+    _testFlightModuleInstance.updateUIModule(_uiModuleInstance);
 
     // Update callbacks for NavModule to use the top of the stack
-    _navModule?.onNavOpen = (url) => _callbackStack.last.onNavOpen?.call(url);
-    _navModule?.onNavClose = () => _callbackStack.last.onNavClose?.call();
-    _navModule?.onNavSetTitle =
+    _navModuleInstance.onNavOpen = (url) => _callbackStack.last.onNavOpen?.call(url);
+    _navModuleInstance.onNavClose = () => _callbackStack.last.onNavClose?.call();
+    _navModuleInstance.onNavSetTitle =
         (title) => _callbackStack.last.onNavSetTitle?.call(title);
-    _navModule?.onNavSetBars =
+    _navModuleInstance.onNavSetBars =
         (visible) => _callbackStack.last.onNavSetBars?.call(visible);
-    _navModule?.onNavReplace =
+    _navModuleInstance.onNavReplace =
         (url, title) => _callbackStack.last.onNavReplace?.call(url, title);
 
     // Update onLoadUrl for content modules
-    _videoModule?.onLoadUrl = (url, title) =>
+    _videoModuleInstance.onLoadUrl = (url, title) =>
         _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
-    _novelModule?.onLoadUrl = (url, title) =>
+    _novelModuleInstance.onLoadUrl = (url, title) =>
         _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
-    _comicsModule?.onLoadUrl = (url, title) =>
+    _comicsModuleInstance.onLoadUrl = (url, title) =>
         _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
-    _postModule?.onLoadUrl = (url, title) =>
+    _postModuleInstance.onLoadUrl = (url, title) =>
         _callbackStack.last.onLoadUrl?.call(url, title) ?? Future.value();
-
-    //    if (_webViewController != null) {
-//      await _injectJavaScript();
-//    } else {
-//      debugPrint(
-//          'Appbridge: _webViewController is null in initialize, skipping JavaScript injection.');
-//    }
 
     _isReady = true;
   }
@@ -511,81 +631,81 @@ class Appbridge {
     final action = parts.length > 1 ? parts[1] : '';
     switch (module) {
       case 'core':
-        return await _coreModule?.handleMethod(action, params, context) ??
+        return await _coreModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'CoreModule not initialized');
       case 'events':
-        return await _eventsModule?.handleMethod(action, params, context) ??
+        return await _eventsModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'EventsModule not initialized');
       case 'app':
-        return await _appModule?.handleMethod(action, params, context) ??
+        return await _appModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'AppModule not initialized');
       case 'nav':
-        return await _navModule?.handleMethod(action, params, context) ??
+        return await _navModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'NavModule not initialized');
       case 'ui':
-        return await _uiModule?.handleMethod(action, params, context) ??
+        return await _uiModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'UIModule not initialized');
       case 'storage':
-        return await _storageModule?.handleMethod(action, params, context) ??
+        return await _storageModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'StorageModule not initialized');
       case 'permission':
-        return await _permissionModule?.handleMethod(action, params, context) ??
+        return await _permissionModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'PermissionModule not initialized');
       case 'device':
-        return await _deviceModule?.handleMethod(action, params, context) ??
+        return await _deviceModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'DeviceModule not initialized');
       case 'share':
-        return await _shareModule?.handleMethod(action, params, context) ??
+        return await _shareModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'ShareModule not initialized');
       case 'clipboard':
-        return await _shareModule?.handleMethod(action, params, context) ??
+        return await _shareModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'ShareModule not initialized');
       case 'notifications':
-        return await _notificationsModule?.handleMethod(
+        return await _notificationsModuleInstance.handleMethod(
                 action, params, context) ??
             BridgeResponse.error(-1, 'NotificationsModule not initialized');
       case 'auth':
-        return await _authModule?.handleMethod(action, params, context) ??
+        return await _authModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'AuthModule not initialized');
       case 'payment':
-        return await _paymentModule?.handleMethod(action, params, context) ??
+        return await _paymentModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'PaymentModule not initialized');
       case 'download':
-        return await _downloadModule?.handleMethod(action, params, context) ??
+        return await _downloadModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'DownloadModule not initialized');
       case 'apk':
-        return await _downloadModule?.handleMethod(action, params, context) ??
+        return await _downloadModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'DownloadModule not initialized');
       case 'cache':
-        return await _downloadModule?.handleMethod(action, params, context) ??
+        return await _downloadModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'DownloadModule not initialized');
       case 'appstore':
-        return await _appStoreModule?.handleMethod(action, params, context) ??
+        return await _appStoreModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'AppStoreModule not initialized');
       case 'deeplink':
-        return await _deepLinkModule?.handleMethod(action, params, context) ??
+        return await _deepLinkModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'DeepLinkModule not initialized');
       case 'liveActivity':
-        return await _liveActivityModule?.handleMethod(
+        return await _liveActivityModuleInstance.handleMethod(
                 action, params, context) ??
             BridgeResponse.error(-1, 'LiveActivityModule not initialized');
       case 'testflight':
-        return await _testFlightModule?.handleMethod(action, params, context) ??
+        return await _testFlightModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'TestFlightModule not initialized');
       case 'video':
-        return await _videoModule?.handleMethod(action, params, context) ??
+        return await _videoModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'VideoModule not initialized');
       case 'novel':
-        return await _novelModule?.handleMethod(action, params, context) ??
+        return await _novelModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'NovelModule not initialized');
       case 'comics':
-        return await _comicsModule?.handleMethod(action, params, context) ??
+        return await _comicsModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'ComicsModule not initialized');
       case 'live':
-        return await _liveModule?.handleMethod(action, params, context) ??
+        return await _liveModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'LiveModule not initialized');
       case 'post':
-        return await _postModule?.handleMethod(action, params, context) ??
+        return await _postModuleInstance.handleMethod(action, params, context) ??
             BridgeResponse.error(-1, 'PostModule not initialized');
       default:
         return BridgeResponse.error(-1, 'Unknown module: $module');
@@ -595,11 +715,6 @@ class Appbridge {
   Future<void> _sendResponse(String messageId, BridgeResponse response) async {
     debugPrint(
         'Appbridge: _sendResponse called for messageId: $messageId, response: ${response.toJson()}');
-    final responseData = {
-      'type': 'bridge_response',
-      'messageId': messageId,
-      'response': response.toJson(),
-    };
     final controller = _currentWebViewController;
     if (controller == null) {
       debugPrint(
@@ -610,7 +725,7 @@ class Appbridge {
       // Use controller
       source: '''
       window.dispatchEvent(new MessageEvent('message', {
-        data: ${jsonEncode(responseData)}
+        data: ${jsonEncode(response.toJson())}
       }));
     ''',
     );
@@ -666,4 +781,3 @@ class Appbridge {
   Future<String?> getPlatformVersion() {
     return AppbridgePlatform.instance.getPlatformVersion();
   }
-}

@@ -72,4 +72,15 @@ class LiveModule extends BaseModule {
     return BridgeResponse.success(
         {'message': 'Live stream paused for ID: $id'});
   }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'live.start',
+      'live.stop',
+      'live.play',
+      'live.pause',
+      // TODO: Add other live streaming capabilities as they are implemented
+    ];
+  }
 }

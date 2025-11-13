@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 
 class PaymentInfoPage extends StatelessWidget {
   final String orderId;
-  final String productId;
-  final String payType;
-  final String status;
+  final double amount;
+  final String currency;
 
   const PaymentInfoPage({
     super.key,
     required this.orderId,
-    required this.productId,
-    required this.payType,
-    required this.status,
+    required this.amount,
+    required this.currency,
   });
 
   @override
@@ -32,9 +30,8 @@ class PaymentInfoPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             _buildInfoRow('订单号:', orderId),
-            _buildInfoRow('商品ID:', productId),
-            _buildInfoRow('支付类型:', payType),
-            _buildInfoRow('支付状态:', status),
+            _buildInfoRow('金额:', amount.toStringAsFixed(2)),
+            _buildInfoRow('货币:', currency),
             const SizedBox(height: 30),
             Center(
               child: ElevatedButton(

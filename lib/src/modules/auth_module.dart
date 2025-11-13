@@ -33,16 +33,23 @@ class AuthModule extends BaseModule {
 
   Future<BridgeResponse> _refreshToken() async {
     try {
-      debugPrint('AuthModule: _refreshToken called');
       // Token刷新需要原生实现或与后端集成
-      final token = {
-        'token': 'refreshed_token_67890',
+      final newToken = {
+        'token': 'mock_new_token_67890',
+        'expiresIn': 3600, // Example: token expires in 1 hour
       };
-      debugPrint('AuthModule: _refreshToken returning: $token');
-      return BridgeResponse.success(token);
+      return BridgeResponse.success(newToken);
     } catch (e) {
       debugPrint('AuthModule: _refreshToken error: $e');
       return BridgeResponse.error(-1, e.toString());
     }
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'auth.getToken',
+      'auth.refreshToken',
+    ];
   }
 }

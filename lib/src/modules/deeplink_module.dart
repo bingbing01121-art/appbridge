@@ -37,5 +37,11 @@ class DeepLinkModule extends BaseModule {
     }
   }
 
-  void dispose() {}
+  @override
+  List<String> getCapabilities() {
+    return [
+      'deeplink.open',
+      'deeplink.parse',
+    ];
+  }
 }

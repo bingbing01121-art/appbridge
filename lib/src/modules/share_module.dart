@@ -68,11 +68,24 @@ class ShareModule extends BaseModule {
 
   Future<BridgeResponse> _setClipboard(Map<String, dynamic> params) async {
     try {
-      final text = params['text'] as String? ?? '';
+      final text = params['text'] as String?;
+      if (text == null) {
+        return BridgeResponse.error(-1, 'Text is required for clipboard.set');
+      }
       await Clipboard.setData(ClipboardData(text: text));
       return BridgeResponse.success(true);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'share.open',
+      'share.copyLink',
+      'clipboard.get',
+      'clipboard.set',
+    ];
   }
 }

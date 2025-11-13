@@ -102,10 +102,19 @@ class StorageModule extends BaseModule {
     try {
       final prefs = await SharedPreferences.getInstance();
       final success = await prefs.clear();
-
       return BridgeResponse.success(success);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'storage.get',
+      'storage.set',
+      'storage.remove',
+      'storage.clear',
+    ];
   }
 }

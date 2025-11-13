@@ -9,6 +9,15 @@ class LiveActivityModule extends BaseModule {
 
   LiveActivityModule(this._uiModule); // Modify constructor
 
+  @override
+  List<String> getCapabilities() {
+    return [
+      'liveActivity.start',
+      'liveActivity.update',
+      'liveActivity.stop',
+    ];
+  }
+
   void updateUIModule(UIModule uiModule) {
     _uiModule = uiModule;
   }

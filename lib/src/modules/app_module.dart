@@ -155,19 +155,30 @@ class AppModule extends BaseModule {
   }
 
   void _showSimulatedUpdateDialog(BuildContext context) {
-    if (!context.mounted) return;
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          contentPadding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
+            borderRadius: BorderRadius.circular(16.0),
           ),
-          child: _SimulatedUpdateDialogContent(rootContext: context),
+          content: _SimulatedUpdateDialogContent(rootContext: context),
         );
       },
     );
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'app.getStatus',
+      'app.openSettings',
+      'app.exit',
+      'app.minimize',
+      'app.update.check',
+      'app.update.apply',
+    ];
   }
 }
 

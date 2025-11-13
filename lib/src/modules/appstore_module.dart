@@ -52,17 +52,25 @@ class AppStoreModule extends BaseModule {
   }
 
   Future<BridgeResponse> _search(Map<String, dynamic> params) async {
-    final query = params['query'] as String?;
-    if (query == null) {
-      return BridgeResponse.error(-1, 'query is required');
+    final term = params['term'] as String?;
+    if (term == null) {
+      return BridgeResponse.error(-1, 'Search term is required');
     }
 
-    final url = Uri.parse('https://apps.apple.com/search?term=$query');
+    final url = Uri.parse('https://apps.apple.com/search?term=$term');
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
       return BridgeResponse.success(null);
     } else {
       return BridgeResponse.error(-1, 'Could not launch $url');
     }
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'appstore.open',
+      'appstore.search',
+    ];
   }
 }

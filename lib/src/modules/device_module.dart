@@ -206,24 +206,45 @@ class DeviceModule extends BaseModule {
 
   Future<BridgeResponse> _getCpuInfo() async {
     try {
+      // Assuming a platform method 'getCpuInfo' exists on the native side
       final Map<dynamic, dynamic> result =
           await _platform.invokeMethod('getCpuInfo');
-      final cores = result['cores'] as int;
-      final arch = result['arch'] as String;
-      final frequency = result['frequency'] as String;
 
       final cpuInfo = {
-        'cores': cores,
-        'arch': arch,
-        'frequency': frequency,
+        'architecture': result['architecture'] ?? 'unknown',
+        'cores': result['cores'] ?? 0,
+        'frequency': result['frequency'] ?? 0, // in MHz or GHz
+        'model': result['model'] ?? 'unknown',
       };
 
       return BridgeResponse.success(cpuInfo);
     } on PlatformException catch (e) {
+      // Fallback for platforms where getCpuInfo is not implemented natively
+      if (e.code == 'MISSING_PLATFORM_CHANNEL') {
+        return BridgeResponse.success({
+          'architecture': Platform.isAndroid ? 'arm64' : 'x86_64', // Placeholder
+          'cores': 4, // Placeholder
+          'frequency': 2000, // Placeholder in MHz
+          'model': 'Generic CPU', // Placeholder
+          'message': 'Native getCpuInfo not implemented, returning placeholder data.'
+        });
+      }
       return BridgeResponse.error(
           -1, "Failed to get CPU info: '${e.message}'.");
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'device.getIds',
+      'device.getInfo',
+      'device.getBattery',
+      'device.getStorageInfo',
+      'device.getMemoryInfo',
+      'device.getCpuInfo',
+    ];
   }
 }

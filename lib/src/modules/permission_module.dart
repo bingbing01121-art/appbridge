@@ -130,26 +130,32 @@ class PermissionModule extends BaseModule {
     switch (name) {
       case 'camera':
         return Permission.camera;
-      case 'photo':
-        return Permission.photos;
-      case 'mic':
+      case 'microphone':
         return Permission.microphone;
+      case 'photos':
+        return Permission.photos;
       case 'location':
         return Permission.location;
-      case 'bluetooth':
-        return Permission.bluetooth;
-      case 'notifications':
-        return Permission.notification;
+      case 'locationAlways':
+        return Permission.locationAlways;
+      case 'locationWhenInUse':
+        return Permission.locationWhenInUse;
       case 'storage':
         return Permission.storage;
-      case 'contacts':
-        return Permission.contacts;
-      case 'sms':
-        return Permission.sms;
-      case 'phone':
-        return Permission.phone;
+      case 'notifications':
+        return Permission.notification;
+      // Add other permissions as needed
       default:
-        throw Exception('Unknown permission: $name');
+        throw Exception('Unknown permission name: $name');
     }
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'permission.check',
+      'permission.request',
+      'permission.ensure',
+    ];
   }
 }

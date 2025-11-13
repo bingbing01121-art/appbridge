@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart' as FFmpegKitPackage;
+import 'package:ffmpeg_kit_flutter_new/return_code.dart' as FFmpegReturnCodePackage;
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart' as FFmpegKitConfigPackage;
 
 import '../models/bridge_response.dart';
 import 'base_module.dart';
@@ -116,12 +119,16 @@ class DownloadModule extends BaseModule {
   }
 
   Future<BridgeResponse> _pauseDownload(Map<String, dynamic> params) async {
+    debugPrint('[_pauseDownload] Received params: $params');
     try {
       final id = params['id'] as String?;
       if (id == null) {
+        debugPrint('[_pauseDownload] Error: Download ID is required');
         return BridgeResponse.error(-1, 'Download ID is required');
       }
+      debugPrint('[_pauseDownload] Attempting to pause download with ID: $id');
       await FlutterDownloader.pause(taskId: id);
+      debugPrint('[_pauseDownload] FlutterDownloader.pause completed for ID: $id');
       return BridgeResponse.success(true);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
@@ -129,12 +136,16 @@ class DownloadModule extends BaseModule {
   }
 
   Future<BridgeResponse> _resumeDownload(Map<String, dynamic> params) async {
+    debugPrint('[_resumeDownload] Received params: $params');
     try {
       final id = params['id'] as String?;
       if (id == null) {
+        debugPrint('[_resumeDownload] Error: Download ID is required');
         return BridgeResponse.error(-1, 'Download ID is required');
       }
+      debugPrint('[_resumeDownload] Attempting to resume download with ID: $id');
       final newTaskId = await FlutterDownloader.resume(taskId: id);
+      debugPrint('[_resumeDownload] FlutterDownloader.resume returned newTaskId: $newTaskId');
       if (newTaskId != null) {
         // Fetch the actual status and progress after resuming
         final tasks = await FlutterDownloader.loadTasksWithRawQuery(
@@ -170,9 +181,9 @@ class DownloadModule extends BaseModule {
         }
 
         // Emit an event to the web view to inform about the resumption with actual status and progress
-        eventEmitter('download_resumed', {
+        eventEmitter('download.progress', {
           'id': newTaskId,
-          'status': statusString,
+          'status': 'downloading', // Explicitly set to downloading
           'progress': currentProgress,
         });
         return BridgeResponse.success({'id': newTaskId});
@@ -185,12 +196,16 @@ class DownloadModule extends BaseModule {
   }
 
   Future<BridgeResponse> _cancelDownload(Map<String, dynamic> params) async {
+    debugPrint('[_cancelDownload] Received params: $params');
     try {
       final id = params['id'] as String?;
       if (id == null) {
+        debugPrint('[_cancelDownload] Error: Download ID is required');
         return BridgeResponse.error(-1, 'Download ID is required');
       }
+      debugPrint('[_cancelDownload] Attempting to cancel download with ID: $id');
       await FlutterDownloader.cancel(taskId: id);
+      debugPrint('[_cancelDownload] FlutterDownloader.cancel completed for ID: $id');
       // Emit an event to the web view to inform about the cancellation
       eventEmitter('download_canceled', {'id': id});
       return BridgeResponse.success(true);
@@ -295,8 +310,80 @@ class DownloadModule extends BaseModule {
   }
 
   Future<BridgeResponse> _downloadM3u8(Map<String, dynamic> params) async {
-    // M3U8 downloads are not supported without ffmpeg_kit_flutter_new
-    return BridgeResponse.error(-1, 'M3U8 downloads are not supported as ffmpeg_kit_flutter_new is not available.');
+    debugPrint('[_downloadM3u8] Received params: $params');
+    try {
+      final m3u8Url = params['url'] as String?;
+      final fileName = params['fileName'] as String? ??
+          'm3u8_video_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final taskId = params['id'] as String? ??
+          'm3u8_download_${DateTime.now().millisecondsSinceEpoch}'; // Unique ID for tracking
+
+      if (m3u8Url == null || m3u8Url.isEmpty) {
+        debugPrint('[_downloadM3u8] Error: M3U8 URL is required');
+        return BridgeResponse.error(-1, 'M3U8 URL is required');
+      }
+
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final outputFilePath = '${appDocDir.path}/$fileName';
+
+      // FFmpeg command to download M3U8 and save as MP4
+      final ffmpegCommand =
+          '-i "$m3u8Url" -c copy -bsf:a aac_adtstoasc -y "$outputFilePath"';
+
+      debugPrint('[_downloadM3u8] Executing FFmpeg command: $ffmpegCommand');
+
+      // Enable statistics callback for progress updates
+      FFmpegKitConfigPackage.FFmpegKitConfig.enableStatisticsCallback((statistics) {
+        debugPrint('[_downloadM3u8] FFmpeg statistics callback triggered: ${statistics.getTime()}ms, ${statistics.getSize()} bytes');
+        // Emit raw statistics as percentage progress is not directly available without total duration
+        eventEmitter('m3u8.download.progress', {
+          'id': taskId,
+          'url': m3u8Url,
+          'time': statistics.getTime(),
+          'size': statistics.getSize(),
+          'speed': statistics.getSpeed(),
+        });
+      });
+
+      // Execute FFmpeg command asynchronously
+      await FFmpegKitPackage.FFmpegKit.executeAsync(ffmpegCommand, (session) async {
+        final returnCode = await session.getReturnCode();
+        if (FFmpegReturnCodePackage.ReturnCode.isSuccess(returnCode)) {
+          debugPrint('[_downloadM3u8] M3U8 download and merge successful: $outputFilePath');
+          eventEmitter('m3u8.download.completed', {
+            'id': taskId,
+            'url': m3u8Url,
+            'path': outputFilePath,
+            'fileName': fileName,
+          });
+        } else if (FFmpegReturnCodePackage.ReturnCode.isCancel(returnCode)) {
+          debugPrint('[_downloadM3u8] M3U8 download cancelled.');
+          eventEmitter('m3u8.download.canceled', {
+            'id': taskId,
+            'url': m3u8Url,
+            'fileName': fileName,
+          });
+        } else {
+          final failStackTrace = await session.getFailStackTrace();
+          debugPrint('[_downloadM3u8] M3U8 download failed. Return code: $returnCode, Stack trace: $failStackTrace');
+          eventEmitter('m3u8.download.failed', {
+            'id': taskId,
+            'url': m3u8Url,
+            'fileName': fileName,
+            'error': failStackTrace ?? 'Unknown error',
+          });
+        }
+        // Disable statistics callback after completion
+        FFmpegKitConfigPackage.FFmpegKitConfig.enableStatisticsCallback(null);
+      });
+
+      return BridgeResponse.success({'id': taskId, 'path': outputFilePath});
+    } catch (e) {
+      debugPrint('[_downloadM3u8] Exception during M3U8 download: $e');
+      // Disable statistics callback on error
+      FFmpegKitConfigPackage.FFmpegKitConfig.enableStatisticsCallback(null);
+      return BridgeResponse.error(-1, e.toString());
+    }
   }
 
   Future<BridgeResponse> _getDefaultDir() async {
@@ -488,9 +575,70 @@ class DownloadModule extends BaseModule {
     }
   }
 
-  Future<BridgeResponse> _getThumbnailForM3u8(
-      Map<String, dynamic> params) async {
-    // M3U8 thumbnail generation is not supported without ffmpeg_kit_flutter_new
-    return BridgeResponse.error(-1, 'M3U8 thumbnail generation is not supported as ffmpeg_kit_flutter_new is not available.');
+  Future<BridgeResponse> _getThumbnailForM3u8(Map<String, dynamic> params) async {
+    try {
+      final m3u8Url = params['url'] as String?;
+      final outputPath = params['outputPath'] as String?;
+      final width = params['width'] as int? ?? 320;
+      final height = params['height'] as int? ?? 180;
+      final time = params['time'] as int? ?? 1000; // time in milliseconds
+
+      if (m3u8Url == null || m3u8Url.isEmpty || outputPath == null || outputPath.isEmpty) {
+        return BridgeResponse.error(-1, 'M3U8 URL and output path are required');
+      }
+
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final outputFilePath = '${appDocDir.path}/$outputPath';
+
+      // FFmpeg command to extract a single frame from the M3U8 at a specific time
+      final ffmpegCommand = '-i "$m3u8Url" -ss ${time / 1000} -y -vframes 1 -vf "scale=${width}:${height}" "$outputFilePath"';
+
+      debugPrint('[_getThumbnailForM3u8] Executing FFmpeg command: $ffmpegCommand');
+
+      await FFmpegKitPackage.FFmpegKit.executeAsync(ffmpegCommand, (session) async {
+        final returnCode = await session.getReturnCode();
+        if (FFmpegReturnCodePackage.ReturnCode.isSuccess(returnCode)) {
+          debugPrint('[_getThumbnailForM3u8] Thumbnail generated successfully: $outputFilePath');
+          eventEmitter('m3u8.thumbnail.completed', {
+            'url': m3u8Url,
+            'path': outputFilePath,
+          });
+        } else {
+          final failStackTrace = await session.getFailStackTrace();
+          debugPrint('[_getThumbnailForM3u8] Thumbnail generation failed. Return code: $returnCode, Stack trace: $failStackTrace');
+          eventEmitter('m3u8.thumbnail.failed', {
+            'url': m3u8Url,
+            'error': failStackTrace ?? 'Unknown error',
+          });
+        }
+      });
+
+      return BridgeResponse.success({'path': outputFilePath});
+    } catch (e) {
+      debugPrint('[_getThumbnailForM3u8] Exception during thumbnail generation: $e');
+      return BridgeResponse.error(-1, e.toString());
+    }
+  }
+
+  @override
+  List<String> getCapabilities() {
+    return [
+      'download.start',
+      'download.pause',
+      'download.resume',
+      'download.cancel',
+      'download.status',
+      'download.list',
+      'download.m3u8',
+      'download.getDefaultDir',
+      'download.setDefaultDir',
+      'download.getFilePath',
+      'apk.download',
+      'apk.install',
+      'apk.open',
+      'apk.isInstalled',
+      'cache.getSize',
+      'cache.clear',
+    ];
   }
 }
