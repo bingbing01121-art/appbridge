@@ -71,17 +71,19 @@ class NotificationsModule extends BaseModule {
   }
 
   Future<BridgeResponse> _showLocal(Map<String, dynamic> params) async {
+    debugPrint('[_showLocal] params: $params');
     try {
-      final id = params['id'] as int? ?? 0;
-      final title = params['title'] as String?;
-      final body = params['body'] as String?;
-      final payload = params['payload'] != null ? jsonEncode(params['payload']) : null;
+      final id = params['id'] as String? ?? '0'; // Notification ID
+      final title = params['title'] as String? ?? '';
+      final body = params['body'] as String? ?? '';
+      final payload =
+          params['payload'] as Map<String, dynamic>?; // Get payload from params
 
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
-        'appbridge_channel_id', // id
+        'appbridge_channel', // id
         'AppBridge Notifications', // name
-        channelDescription: 'Notifications from AppBridge', // description
+        channelDescription: 'Notifications from AppBridge H5 SDK',
         importance: Importance.max,
         priority: Priority.high,
         showWhen: false,
@@ -94,23 +96,18 @@ class NotificationsModule extends BaseModule {
       );
 
       await _flutterLocalNotificationsPlugin.show(
-        id,
+        int.tryParse(id) ?? 0, // Convert String id to int
         title,
         body,
         platformChannelSpecifics,
-        payload: payload,
+        payload: payload != null
+            ? jsonEncode(payload)
+            : null, // Encode payload to string
       );
+
       return BridgeResponse.success(true);
     } catch (e) {
       return BridgeResponse.error(-1, e.toString());
     }
-  }
-
-  @override
-  List<String> getCapabilities() {
-    return [
-      'notifications.check',
-      'notifications.showLocal',
-    ];
   }
 }

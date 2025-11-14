@@ -20,22 +20,22 @@ class EventsModule extends BaseModule {
     _webViewController = controller;
   }
 
-  // Map for method dispatch
-  late final Map<String, Future<BridgeResponse> Function(Map<String, dynamic>)> _actions = {
-    'on': _on,
-    'once': _once,
-    'emit': _emit,
-    'off': _off,
-  };
-
   @override
   Future<BridgeResponse> handleMethod(
       String action, Map<String, dynamic> params,
       [BuildContext? context]) async {
-    if (_actions.containsKey(action)) {
-      return await _actions[action]!(params);
+    switch (action) {
+      case 'on':
+        return await _on(params);
+      case 'once':
+        return await _once(params);
+      case 'emit':
+        return await _emit(params);
+      case 'off': // New case for unsubscribing
+        return await _off(params);
+      default:
+        return BridgeResponse.error(-1, 'Unknown action: $action');
     }
-    return BridgeResponse.error(-1, 'Unknown action: $action');
   }
 
   Future<BridgeResponse> _on(Map<String, dynamic> params) async {
@@ -147,22 +147,7 @@ class EventsModule extends BaseModule {
       return BridgeResponse.error(-1, 'Event name and callbackId are required');
     }
 
-    if (_eventListeners.containsKey(event)) {
-      _eventListeners[event]!.remove(callbackId);
-      if (_eventListeners[event]!.isEmpty) {
-        _eventListeners.remove(event);
-      }
-    }
+    _eventListeners[event]?.remove(callbackId);
     return BridgeResponse.success(true);
-  }
-
-  @override
-  List<String> getCapabilities() {
-    return [
-      'events.on',
-      'events.once',
-      'events.emit',
-      'events.off',
-    ];
   }
 }

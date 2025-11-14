@@ -207,7 +207,7 @@ class _MyAppState extends State<MyApp> {
           builder: (BuildContext builderContext) {
             return PopScope(
               canPop: false, // We handle popping manually
-              onPopInvokedWithResult: (didPop, result) async {
+              onPopInvoked: (didPop) async {
                 if (didPop) return; // If system already popped, do nothing
 
                 // If WebView cannot go back, handle double-tap to exit
@@ -241,19 +241,7 @@ class _MyAppState extends State<MyApp> {
               child: InAppWebView(
                 initialFile: 'packages/appbridge/assets/demo.html',
                 initialSettings: InAppWebViewSettings(
-                  // Common settings
-                  javaScriptCanOpenWindowsAutomatically: true,
-                  javaScriptEnabled: true,
-                  domStorageEnabled: true,
-                  databaseEnabled: true,
-                  // iOS-specific optimizations
-                  allowsLinkPreview: false,
-                  // suppressesIncrementalRendering: true, // May improve initial load, but causes issues on some iOS versions
-                  limitsNavigationsToAppBoundDomains: true,
-                  directionality: WebViewDirectionality.ltr, // Explicitly set directionality
-                  // Navigation control
-                  useOnNavigationResponse: true,
-                  useShouldOverrideUrlLoading: true,
+                  // Common settings here
                 ),
                 onWebViewCreated: (controller) async {
                   _webViewController = controller;
@@ -291,12 +279,16 @@ class _MyAppState extends State<MyApp> {
                       },
                       onLoadUrl: (url, title) async {
                         if (_webViewController != null) {
-                          debugPrint('Loading URL directly in WebView: $url');
-                          await _webViewController!.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
-                          appbridgePlugin?.ui?.toast(message: '加载URL: $url');
+                          if (appbridgePlugin != null) {
+                            appbridgePlugin?.nav?.open(
+                              url: url,
+                              title: title,
+                            ); // Pass the title
+                            appbridgePlugin?.ui?.toast(message: '加载URL: $url');
+                          }
                         } else {
                           debugPrint(
-                            'Error: _webViewController is null when trying to load URL via onLoadUrl',
+                            'Error: _webViewController is null when trying to load URL via loadUrl',
                           );
                         }
                       },

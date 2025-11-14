@@ -1,6 +1,6 @@
 name: appbridge
 description:  This is a rich flutter javascript interactive plugin.
-version: 1.0.1
+version: 1.0.2
 homepage: https://github.com/bingbing01121-art/appbridge
 repository: https://github.com/bingbing01121-art/appbridge
 issue_tracker: https://github.com/bingbing01121-art/appbridge/issues/issues
@@ -13,9 +13,9 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
-  flutter_inappwebview: ^6.1.5
-  device_info_plus: ^12.2.0
-  permission_handler: ^12.0.1
+  flutter_inappwebview: ^6.0.0
+  device_info_plus: ^11.1.1
+  permission_handler: ^11.3.1
   shared_preferences: ^2.2.2
   dio: ^5.4.0
   path_provider: ^2.1.2
@@ -26,10 +26,8 @@ dependencies:
   battery_plus: ^7.0.0
   flutter_local_notifications: ^19.0.0
   in_app_update: ^4.2.0
-  flutter_downloader: ^1.12.0
-  ffmpeg_kit_flutter_new: ^4.1.0
-#  flutter_livepush_plugin: ^7.0.0
-  image_picker: ^1.2.0
+  flutter_downloader: ^1.11.8
+  image_picker: ^1.1.0
   fluttertoast: ^9.0.0
   share_plus: ^12.0.1
   video_player: ^2.8.6
@@ -41,7 +39,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^4.0.0
   json_annotation: ^4.8.1
   flutter_local_notifications_platform_interface: ^9.0.0
 

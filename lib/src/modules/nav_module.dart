@@ -120,20 +120,10 @@ class NavModule extends BaseModule {
   Future<BridgeResponse> _setBars(Map<String, dynamic> params) async {
     final visible = params['visible'] as bool?;
     if (visible == null) {
-      return BridgeResponse.error(400, 'Visibility parameter is required for nav.setBars');
+      return BridgeResponse.error(
+          400, 'Visible parameter is required for nav.setBars');
     }
     onNavSetBars?.call(visible);
-    return BridgeResponse.success(true);
-  }
-
-  @override
-  List<String> getCapabilities() {
-    return [
-      'nav.open',
-      'nav.close',
-      'nav.replace',
-      'nav.setTitle',
-      'nav.setBars',
-    ];
+    return BridgeResponse.success();
   }
 }

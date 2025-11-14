@@ -1,3 +1,4 @@
 -keep class vn.hunghd.flutterdownloader.** { *; }
 -keep class com.antonkarpenko.ffmpegkit.** { *; }
 -keep class com.arthenica.ffmpegkit.** { *; }
+-keep class android.window.BackEvent

@@ -305,38 +305,11 @@ class UIModule extends BaseModule {
   }
 
   Future<BridgeResponse> _safeArea() async {
-    final currentContext = Appbridge().context;
-    if (currentContext == null) {
-      return BridgeResponse.error(
-          -1, 'No valid BuildContext available for UI operations.');
+    try {
+      final safeArea = {'top': 44, 'bottom': 34, 'left': 0, 'right': 0};
+      return BridgeResponse.success(safeArea);
+    } catch (e) {
+      return BridgeResponse.error(-1, e.toString());
     }
-
-    final MediaQueryData mediaQuery = MediaQuery.of(currentContext);
-    final EdgeInsets viewInsets = mediaQuery.viewInsets;
-    final EdgeInsets viewPadding = mediaQuery.viewPadding;
-
-    return BridgeResponse.success({
-      'top': viewPadding.top,
-      'bottom': viewPadding.bottom,
-      'left': viewPadding.left,
-      'right': viewPadding.right,
-      'keyboardTop': viewInsets.top,
-      'keyboardBottom': viewInsets.bottom,
-      'keyboardLeft': viewInsets.left,
-      'keyboardRight': viewInsets.right,
-    });
-  }
-
-  @override
-  List<String> getCapabilities() {
-    return [
-      'ui.toast',
-      'ui.alert',
-      'ui.confirm',
-      'ui.actionSheet',
-      'ui.loading',
-      'ui.haptics',
-      'ui.safeArea',
-    ];
   }
 }
